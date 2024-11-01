@@ -7,17 +7,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-type Property = {
+interface Property {
   key: string
   value: string
 }
 
-type Event = {
+interface EventProperties {
+  [key: string]: string
+}
+
+interface Event {
   event_name: string
   timestamp: string
   properties: Property[]
   idempotency_key: string
   external_customer_id: string
+}
+
+interface FormattedEvent extends Omit<Event, 'properties'> {
+  properties: EventProperties
 }
 
 export default function Component() {
@@ -84,13 +92,13 @@ export default function Component() {
     }
     
     // Convert timestamps to ISO8601 format (UTC) and properties array to an object
-    const eventsWithFormattedProperties = events.map(event => ({
-        ...event,
-        timestamp: new Date(event.timestamp).toISOString(), // Convert to ISO8601 in UTC
-        properties: event.properties.reduce((acc, prop) => {
-          acc[prop.key] = prop.value;
-          return acc;
-        }, {} as Record<string, string>), // Convert properties array to an object
+    const eventsWithFormattedProperties: FormattedEvent[] = events.map(event => ({
+      ...event,
+      timestamp: new Date(event.timestamp).toISOString(),
+      properties: event.properties.reduce<EventProperties>((acc, prop) => {
+        acc[prop.key] = prop.value;
+        return acc;
+      }, {})
     }));
   
     try {
