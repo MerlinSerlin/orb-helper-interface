@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,29 +8,29 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 type Property = {
-  key: string
-  value: string
+  key: string;
+  value: string;
 }
 
 type Event = {
-  event_name: string
-  timestamp: string
-  properties: Property[]
-  idempotency_key: string
-  external_customer_id: string
+  event_name: string;
+  timestamp: string;
+  properties: Property[];
+  idempotency_key: string;
+  external_customer_id: string;
 }
 
 type FormattedEvent = {
-  event_name: string
-  timestamp: string
-  properties: Record<string, string>
-  idempotency_key: string
-  external_customer_id: string
+  event_name: string;
+  timestamp: string;
+  properties: Record<string, string>;
+  idempotency_key: string;
+  external_customer_id: string;
 }
 
 type ApiResponse = {
-  count: number
-  success: boolean
+  count: number;
+  success: boolean;
 }
 
 export default function Component() {
