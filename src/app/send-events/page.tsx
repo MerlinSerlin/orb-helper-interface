@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-interface */
 'use client'
 
 import { useState } from 'react'
@@ -20,7 +19,7 @@ type Event = {
   idempotency_key: string;
   external_customer_id: string;
 }
-
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 type FormattedEvent = {
   event_name: string;
   timestamp: string;
