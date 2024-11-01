@@ -7,20 +7,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-type Property = {
+interface Property {
   key: string;
   value: string;
 }
 
-type Event = {
+interface Event {
   event_name: string;
   timestamp: string;
   properties: Property[];
   idempotency_key: string;
   external_customer_id: string;
 }
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-type FormattedEvent = {
+
+interface FormattedEvent {
   event_name: string;
   timestamp: string;
   properties: Record<string, string>;
@@ -28,19 +28,19 @@ type FormattedEvent = {
   external_customer_id: string;
 }
 
-type ApiResponse = {
+interface ApiResponse {
   count: number;
   success: boolean;
 }
 
 export default function Component() {
-    const [events, setEvents] = useState<Event[]>([{
-        event_name: '',
-        timestamp: '',
-        properties: [] as Property[],  // Cast empty array as Property[]
-        idempotency_key: uuidv4(),
-        external_customer_id: ''
-    }]);
+  const [events, setEvents] = useState<Event[]>([{
+    event_name: '',
+    timestamp: '',
+    properties: [] as Property[],
+    idempotency_key: uuidv4(),
+    external_customer_id: ''
+  }]);
 
   const addEvent = () => {
     setEvents([...events, {
@@ -49,40 +49,40 @@ export default function Component() {
       properties: [],
       idempotency_key: uuidv4(),
       external_customer_id: ''
-    }])
-  }
+    }]);
+  };
 
   const updateEvent = (index: number, field: keyof Omit<Event, 'properties'>, value: string) => {
-    const newEvents = [...events]
-    newEvents[index] = { ...newEvents[index], [field]: value }
-    setEvents(newEvents)
-  }
+    const newEvents = [...events];
+    newEvents[index] = { ...newEvents[index], [field]: value };
+    setEvents(newEvents);
+  };
 
   const addProperty = (eventIndex: number) => {
-    const newEvents = [...events]
-    newEvents[eventIndex].properties.push({ key: '', value: '' })
-    setEvents(newEvents)
-  }
+    const newEvents = [...events];
+    newEvents[eventIndex].properties.push({ key: '', value: '' });
+    setEvents(newEvents);
+  };
 
   const updateProperty = (eventIndex: number, propertyIndex: number, field: keyof Property, value: string) => {
-    const newEvents = [...events]
+    const newEvents = [...events];
     newEvents[eventIndex] = {
       ...newEvents[eventIndex],
       properties: newEvents[eventIndex].properties.map((prop, index) =>
         index === propertyIndex ? { ...prop, [field]: value } : prop
       )
-    }
-    setEvents(newEvents)
-  }
+    };
+    setEvents(newEvents);
+  };
 
   const removeProperty = (eventIndex: number, propertyIndex: number) => {
-    const newEvents = [...events]
+    const newEvents = [...events];
     newEvents[eventIndex] = {
       ...newEvents[eventIndex],
       properties: newEvents[eventIndex].properties.filter((_, index) => index !== propertyIndex)
-    }
-    setEvents(newEvents)
-  }
+    };
+    setEvents(newEvents);
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -98,14 +98,14 @@ export default function Component() {
     
     // Convert timestamps to ISO8601 format (UTC) and properties array to an object
     const eventsWithFormattedProperties: FormattedEvent[] = events.map(event => ({
-        ...event,
-        timestamp: new Date(event.timestamp).toISOString(),
-        properties: event.properties.reduce((acc, prop) => {
-          if (prop.key) {
-            acc[prop.key] = prop.value;
-          }
-          return acc;
-        }, {} as Record<string, string>),  // Explicitly assert as Record<string, string>
+      ...event,
+      timestamp: new Date(event.timestamp).toISOString(),
+      properties: event.properties.reduce((acc, prop) => {
+        if (prop.key) {
+          acc[prop.key] = prop.value;
+        }
+        return acc;
+      }, {} as Record<string, string>)
     }));
   
     try {
@@ -199,5 +199,5 @@ export default function Component() {
         <Button type="submit">Submit</Button>
       </div>
     </form>
-  )
+  );
 }
