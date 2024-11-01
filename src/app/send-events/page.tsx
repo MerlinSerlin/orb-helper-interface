@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-interface Property {
+type Property = {
   key: string
   value: string
 }
 
-interface Event {
+type Event = {
   event_name: string
   timestamp: string
   properties: Property[]
@@ -20,7 +20,7 @@ interface Event {
   external_customer_id: string
 }
 
-interface FormattedEvent {
+type FormattedEvent = {
   event_name: string
   timestamp: string
   properties: Record<string, string>
@@ -28,7 +28,7 @@ interface FormattedEvent {
   external_customer_id: string
 }
 
-interface ApiResponse {
+type ApiResponse = {
   count: number
   success: boolean
 }
