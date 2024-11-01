@@ -85,12 +85,12 @@ export default function Component() {
     
     // Convert timestamps to ISO8601 format (UTC) and properties array to an object
     const eventsWithFormattedProperties = events.map(event => ({
-      ...event,
-      timestamp: new Date(event.timestamp).toISOString(), // Convert to ISO8601 in UTC
-      properties: event.properties.reduce((acc, prop) => {
-        acc[prop.key] = prop.value;
-        return acc;
-      }, {} as Record<string, string>), // Convert properties array to an object
+        ...event,
+        timestamp: new Date(event.timestamp).toISOString(), // Convert to ISO8601 in UTC
+        properties: event.properties.reduce((acc, prop) => {
+          acc[prop.key] = prop.value;
+          return acc;
+        }, {} as Record<string, string>), // Convert properties array to an object
     }));
   
     try {
