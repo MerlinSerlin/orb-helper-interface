@@ -28,6 +28,11 @@ interface FormattedEvent extends Omit<Event, 'properties'> {
   properties: EventProperties
 }
 
+interface ApiResponse {
+  count: number
+  success: boolean
+}
+
 export default function Component() {
   const [events, setEvents] = useState<Event[]>([{
     event_name: '',
@@ -79,7 +84,7 @@ export default function Component() {
     setEvents(newEvents)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     // Validate required fields
@@ -96,7 +101,9 @@ export default function Component() {
       ...event,
       timestamp: new Date(event.timestamp).toISOString(),
       properties: event.properties.reduce<EventProperties>((acc, prop) => {
-        acc[prop.key] = prop.value;
+        if (prop.key) {  // Only add properties with non-empty keys
+          acc[prop.key] = prop.value;
+        }
         return acc;
       }, {})
     }));
@@ -114,7 +121,7 @@ export default function Component() {
         throw new Error('Failed to submit events');
       }
     
-      const result = await response.json();
+      const result = await response.json() as ApiResponse;
       console.log('API Response:', result);
       alert(`Successfully processed ${result.count} events`);
     } catch (error) {
