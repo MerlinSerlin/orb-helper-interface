@@ -89,6 +89,16 @@ export default function Component() {
     setEvents(newEvents)
   }
 
+  const resetEvents = () => {
+    setEvents([{
+      event_name: '',
+      timestamp: convertToLocalTimeISO(new Date()),
+      properties: [],
+      idempotency_key: uuidv4(),
+      external_customer_id: ''
+    }])
+  }
+
   const generateLookalikeEvents = (templateEvent: Event, count: number): Event[] => {
     return Array.from({ length: count }, () => ({
       ...templateEvent,
@@ -140,6 +150,7 @@ export default function Component() {
       }
 
       setApiResponse(`Successfully processed ${result.count} events. Orb API Response: ${JSON.stringify(result.orbResponse)}`)
+      resetEvents()
     } catch (error) {
       console.error('Error submitting events:', error)
       setApiResponse(`Failed to submit events: ${error instanceof Error ? error.message : 'Unknown error'}`)
