@@ -37,7 +37,7 @@ export default function Component() {
     idempotency_key: uuidv4(),
     external_customer_id: ''
   }])
-  const [autoEventCount, setAutoEventCount] = useState<string>('1')
+  const [autoEventCount, setAutoEventCount] = useState<string>('0')
   const [generatedEventCount, setGeneratedEventCount] = useState(0)
   const [apiResponse, setApiResponse] = useState<string | null>(null)
 
@@ -54,6 +54,12 @@ export default function Component() {
   const updateEvent = (index: number, field: keyof Omit<Event, 'properties'>, value: string) => {
     const newEvents = [...events]
     newEvents[index] = { ...newEvents[index], [field]: value }
+    setEvents(newEvents)
+  }
+
+  const removeEvent = (index: number) => {
+    const newEvents = [...events]
+    newEvents.splice(index, 1)
     setEvents(newEvents)
   }
 
@@ -147,7 +153,7 @@ export default function Component() {
   return (
     <div className="container mx-auto px-4 py-8">
       <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto">
-        {events.map((event, eventIndex) => (
+        {/* {events.map((event, eventIndex) => (
           <Card key={event.idempotency_key} className="w-full">
             <CardHeader>
               <CardTitle>Event {eventIndex + 1}</CardTitle>
@@ -236,6 +242,109 @@ export default function Component() {
               </div>
             </CardContent>
           </Card>
+        ))} */}
+        {events.map((event, eventIndex) => (
+          <Card key={event.idempotency_key} className="w-full">
+            <CardHeader>
+              <CardTitle>Event {eventIndex + 1}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Other inputs remain the same */}
+              <div className="space-y-2">
+                <Label htmlFor={`event-name-${eventIndex}`}>Event Name *</Label>
+                <Input
+                  id={`event-name-${eventIndex}`}
+                  value={event.event_name}
+                  onChange={(e) => updateEvent(eventIndex, 'event_name', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`timestamp-${eventIndex}`}>Timestamp *</Label>
+                <Input
+                  id={`timestamp-${eventIndex}`}
+                  type="datetime-local"
+                  value={event.timestamp.slice(0, 16)} // Only show date and time for input
+                  onChange={(e) => {
+                    const localDate = new Date(e.target.value);
+                    const isoTimestamp = convertToLocalTimeISO(localDate);
+                    updateEvent(eventIndex, 'timestamp', isoTimestamp);
+                  }}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`external-customer-id-${eventIndex}`}>External Customer ID *</Label>
+                <Input
+                  id={`external-customer-id-${eventIndex}`}
+                  value={event.external_customer_id}
+                  onChange={(e) => updateEvent(eventIndex, 'external_customer_id', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Idempotency Key (auto-generated)</Label>
+                <Input value={event.idempotency_key} disabled />
+              </div>
+              <div className="space-y-2">
+                <Label>Properties</Label>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Key</TableHead>
+                      <TableHead>Value</TableHead>
+                      <TableHead className="w-[100px]">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {event.properties.map((prop, propIndex) => (
+                      <TableRow key={propIndex}>
+                        <TableCell>
+                          <Input
+                            placeholder="Key"
+                            value={prop.key}
+                            onChange={(e) => updateProperty(eventIndex, propIndex, 'key', e.target.value)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            placeholder="Value"
+                            value={prop.value}
+                            onChange={(e) => updateProperty(eventIndex, propIndex, 'value', e.target.value)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            onClick={() => removeProperty(eventIndex, propIndex)}
+                            className="w-full"
+                          >
+                            Remove
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Button type="button" onClick={() => addProperty(eventIndex)} className="w-full">
+                  Add Property
+                </Button>
+              </div>
+              {/* Add the remove button only if it's not the first event */}
+              {eventIndex > 0 && (
+                <div className="flex justify-end">
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    onClick={() => removeEvent(eventIndex)}
+                  >
+                    Remove Event
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         ))}
         <div className="flex justify-between items-center">
           <Button type="button" onClick={addEvent}>Add Another Event</Button>
@@ -245,12 +354,37 @@ export default function Component() {
           <CardHeader>
             <CardTitle>Generate Lookalike Events</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          {/* <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Label htmlFor="auto-event-count">Number of lookalike events to generate:</Label>
               <Select value={autoEventCount} onValueChange={(value) => {
                 setAutoEventCount(value)
                 setGeneratedEventCount(parseInt(value))
+              }}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select count" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 21 }, (_, i) => i).map((num) => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p>
+              {generatedEventCount > 0 
+                ? `${generatedEventCount} lookalike event${generatedEventCount > 1 ? 's' : ''} will be generated and included in the submission.`
+                : 'No lookalike events will be generated.'}
+            </p>
+          </CardContent> */}
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <Label htmlFor="auto-event-count">Number of lookalike events to generate:</Label>
+              <Select value={autoEventCount} onValueChange={(value) => {
+                setAutoEventCount(value);
+                setGeneratedEventCount(parseInt(value));
               }}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select count" />
