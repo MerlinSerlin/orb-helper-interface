@@ -116,16 +116,12 @@ export default function Component() {
       ...generateLookalikeEvents(events[events.length - 1], generatedEventCount)
     ]
 
-    // Convert timestamps to ISO8601UTC format
-
-    events.map((event) => {
-        event.timestamp = new Date(event.timestamp).toISOString()
-    })
-
     // Convert properties array to object
     const formattedEvents = allEvents.map(event => ({
       ...event,
-      properties: Object.fromEntries(event.properties.map(prop => [prop.key, prop.value]))
+      properties: Object.fromEntries(event.properties.map(prop => [prop.key, prop.value])),
+      // Convert timestamps to ISO8601UTC format
+      timestamp: new Date(event.timestamp).toISOString()
     }))
 
     try {
@@ -153,96 +149,6 @@ export default function Component() {
   return (
     <div className="container mx-auto px-4 py-8">
       <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto">
-        {/* {events.map((event, eventIndex) => (
-          <Card key={event.idempotency_key} className="w-full">
-            <CardHeader>
-              <CardTitle>Event {eventIndex + 1}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor={`event-name-${eventIndex}`}>Event Name *</Label>
-                <Input
-                  id={`event-name-${eventIndex}`}
-                  value={event.event_name}
-                  onChange={(e) => updateEvent(eventIndex, 'event_name', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`timestamp-${eventIndex}`}>Timestamp *</Label>
-                <Input
-                  id={`timestamp-${eventIndex}`}
-                  type="datetime-local"
-                  value={event.timestamp.slice(0, 16)} // Only show date and time for input
-                  onChange={(e) => {
-                    const localDate = new Date(e.target.value);
-                    const isoTimestamp = convertToLocalTimeISO(localDate);
-                    updateEvent(eventIndex, 'timestamp', isoTimestamp);
-                  }}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`external-customer-id-${eventIndex}`}>External Customer ID *</Label>
-                <Input
-                  id={`external-customer-id-${eventIndex}`}
-                  value={event.external_customer_id}
-                  onChange={(e) => updateEvent(eventIndex, 'external_customer_id', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Idempotency Key (auto-generated)</Label>
-                <Input value={event.idempotency_key} disabled />
-              </div>
-              <div className="space-y-2">
-                <Label>Properties</Label>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Key</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead className="w-[100px]">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {event.properties.map((prop, propIndex) => (
-                      <TableRow key={propIndex}>
-                        <TableCell>
-                          <Input
-                            placeholder="Key"
-                            value={prop.key}
-                            onChange={(e) => updateProperty(eventIndex, propIndex, 'key', e.target.value)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            placeholder="Value"
-                            value={prop.value}
-                            onChange={(e) => updateProperty(eventIndex, propIndex, 'value', e.target.value)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button 
-                            type="button" 
-                            variant="destructive" 
-                            onClick={() => removeProperty(eventIndex, propIndex)}
-                            className="w-full"
-                          >
-                            Remove
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Button type="button" onClick={() => addProperty(eventIndex)} className="w-full">
-                  Add Property
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))} */}
         {events.map((event, eventIndex) => (
           <Card key={event.idempotency_key} className="w-full">
             <CardHeader>
