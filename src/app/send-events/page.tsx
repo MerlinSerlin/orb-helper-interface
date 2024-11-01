@@ -12,9 +12,6 @@ interface Property {
   value: string
 }
 
-// Changed from interface to type alias with explicit Record type
-type EventProperties = Record<string, string>
-
 interface Event {
   event_name: string
   timestamp: string
@@ -23,8 +20,12 @@ interface Event {
   external_customer_id: string
 }
 
-interface FormattedEvent extends Omit<Event, 'properties'> {
-  properties: EventProperties
+interface FormattedEvent {
+  event_name: string
+  timestamp: string
+  properties: Record<string, string>
+  idempotency_key: string
+  external_customer_id: string
 }
 
 interface ApiResponse {
@@ -99,12 +100,12 @@ export default function Component() {
     const eventsWithFormattedProperties: FormattedEvent[] = events.map(event => ({
       ...event,
       timestamp: new Date(event.timestamp).toISOString(),
-      properties: event.properties.reduce<Record<string, string>>((acc, prop) => {
-        if (prop.key) {  // Only add properties with non-empty keys
+      properties: event.properties.reduce((acc, prop) => {
+        if (prop.key) {
           acc[prop.key] = prop.value;
         }
         return acc;
-      }, {})
+      }, {} as Record<string, string>)
     }));
   
     try {
