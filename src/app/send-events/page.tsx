@@ -12,9 +12,8 @@ interface Property {
   value: string
 }
 
-interface EventProperties {
-  [key: string]: string
-}
+// Changed from interface to type alias with explicit Record type
+type EventProperties = Record<string, string>
 
 interface Event {
   event_name: string
@@ -100,7 +99,7 @@ export default function Component() {
     const eventsWithFormattedProperties: FormattedEvent[] = events.map(event => ({
       ...event,
       timestamp: new Date(event.timestamp).toISOString(),
-      properties: event.properties.reduce<EventProperties>((acc, prop) => {
+      properties: event.properties.reduce<Record<string, string>>((acc, prop) => {
         if (prop.key) {  // Only add properties with non-empty keys
           acc[prop.key] = prop.value;
         }
