@@ -35,13 +35,13 @@ type ApiResponse = {
 }
 
 export default function Component() {
-  const [events, setEvents] = useState<Event[]>([{
-    event_name: '',
-    timestamp: '',
-    properties: [],
-    idempotency_key: uuidv4(),
-    external_customer_id: ''
-  }])
+    const [events, setEvents] = useState<Event[]>([{
+        event_name: '',
+        timestamp: '',
+        properties: [] as Property[],  // Cast empty array as Property[]
+        idempotency_key: uuidv4(),
+        external_customer_id: ''
+    }]);
 
   const addEvent = () => {
     setEvents([...events, {
@@ -99,14 +99,14 @@ export default function Component() {
     
     // Convert timestamps to ISO8601 format (UTC) and properties array to an object
     const eventsWithFormattedProperties: FormattedEvent[] = events.map(event => ({
-      ...event,
-      timestamp: new Date(event.timestamp).toISOString(),
-      properties: event.properties.reduce((acc, prop) => {
-        if (prop.key) {
-          acc[prop.key] = prop.value;
-        }
-        return acc;
-      }, {} as Record<string, string>)
+        ...event,
+        timestamp: new Date(event.timestamp).toISOString(),
+        properties: event.properties.reduce((acc, prop) => {
+          if (prop.key) {
+            acc[prop.key] = prop.value;
+          }
+          return acc;
+        }, {} as Record<string, string>),  // Explicitly assert as Record<string, string>
     }));
   
     try {
