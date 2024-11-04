@@ -271,31 +271,6 @@ export default function Component() {
           <CardHeader>
             <CardTitle>Generate Lookalike Events</CardTitle>
           </CardHeader>
-          {/* <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <Label htmlFor="auto-event-count">Number of lookalike events to generate:</Label>
-              <Select value={autoEventCount} onValueChange={(value) => {
-                setAutoEventCount(value)
-                setGeneratedEventCount(parseInt(value))
-              }}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select count" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 21 }, (_, i) => i).map((num) => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <p>
-              {generatedEventCount > 0 
-                ? `${generatedEventCount} lookalike event${generatedEventCount > 1 ? 's' : ''} will be generated and included in the submission.`
-                : 'No lookalike events will be generated.'}
-            </p>
-          </CardContent> */}
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Label htmlFor="auto-event-count">Number of lookalike events to generate:</Label>
