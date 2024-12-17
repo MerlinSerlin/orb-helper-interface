@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { convertToLocalTimeISO } from "@/lib/utils"
+import { DateTime } from 'luxon';
 
 type Property = {
   key: string
@@ -24,18 +26,12 @@ type Event = {
 }
 
 export default function Component() {
-  const convertToLocalTimeISO = (isoTimestamp: Date): string => {
-    const offsetMillis = isoTimestamp.getTimezoneOffset() * 60000; // Timezone offset in milliseconds
-    const localISOTime = new Date(isoTimestamp.getTime() - offsetMillis).toISOString().slice(0, 19); // Trimming milliseconds
-    return localISOTime;
-  }
-
   const [events, setEvents] = useState<Event[]>([{
     event_name: '',
     timestamp: convertToLocalTimeISO(new Date()),
     properties: [],
     idempotency_key: uuidv4(),
-    external_customer_id: ''
+    external_customer_id: '',
   }])
   const [autoEventCount, setAutoEventCount] = useState<string>('0')
   const [generatedEventCount, setGeneratedEventCount] = useState(0)
@@ -131,7 +127,9 @@ export default function Component() {
       ...event,
       properties: Object.fromEntries(event.properties.map(prop => [prop.key, prop.value])),
       // Convert timestamps to ISO8601UTC format
-      timestamp: new Date(event.timestamp).toISOString()
+      timestamp: DateTime.fromISO(event.timestamp, { zone: 'local' })
+      .toUTC()
+      .toISO(),
     }))
 
     try {
