@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { v4 as uuidv4 } from 'uuid'
+import { useState } from "react"
+import { v4 as uuidv4 } from "uuid"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,11 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { convertToLocalTimeISO } from "@/lib/utils"
-import { DateTime } from 'luxon';
 
 type Property = {
   key: string
   value: string
+  isLookalike?: boolean
+  lookalikeType?: "set" | "range"
+  lookalikeValues?: string[]
+  lookalikeRange?: { min: number; max: number }
 }
 
 type Event = {
@@ -25,29 +28,41 @@ type Event = {
   external_customer_id: string
 }
 
+type LookalikeValueSet = {
+  key: string
+  type: "set" | "range"
+  values: string[]
+  range?: { min: number; max: number }
+}
+
 export default function Component() {
-  const [events, setEvents] = useState<Event[]>([{
-    event_name: '',
-    timestamp: convertToLocalTimeISO(new Date()),
-    properties: [],
-    idempotency_key: uuidv4(),
-    external_customer_id: '',
-  }])
-  const [autoEventCount, setAutoEventCount] = useState<string>('0')
+  const [events, setEvents] = useState<Event[]>([
+    {
+      event_name: "",
+      timestamp: convertToLocalTimeISO(new Date()),
+      properties: [],
+      idempotency_key: uuidv4(),
+      external_customer_id: "",
+    },
+  ])
+  const [autoEventCount, setAutoEventCount] = useState<string>("0")
   const [generatedEventCount, setGeneratedEventCount] = useState(0)
   const [apiResponse, setApiResponse] = useState<string | null>(null)
 
   const addEvent = () => {
-    setEvents([...events, {
-      event_name: '',
-      timestamp: convertToLocalTimeISO(new Date()),
-      properties: [],
-      idempotency_key: uuidv4(),
-      external_customer_id: ''
-    }])
+    setEvents([
+      ...events,
+      {
+        event_name: "",
+        timestamp: convertToLocalTimeISO(new Date()),
+        properties: [],
+        idempotency_key: uuidv4(),
+        external_customer_id: "",
+      },
+    ])
   }
 
-  const updateEvent = (index: number, field: keyof Omit<Event, 'properties'>, value: string) => {
+  const updateEvent = (index: number, field: keyof Omit<Event, "properties">, value: string) => {
     const newEvents = [...events]
     newEvents[index] = { ...newEvents[index], [field]: value }
     setEvents(newEvents)
@@ -61,18 +76,42 @@ export default function Component() {
 
   const addProperty = (eventIndex: number) => {
     const newEvents = [...events]
-    newEvents[eventIndex].properties.push({ key: '', value: '' })
+    newEvents[eventIndex].properties.push({ key: "", value: "" })
     setEvents(newEvents)
   }
 
-  const updateProperty = (eventIndex: number, propertyIndex: number, field: keyof Property, value: string) => {
+  const updateProperty = (
+    eventIndex: number,
+    propertyIndex: number,
+    field: keyof Property,
+    value: string | boolean | { min: number; max: number } | string[] | undefined,
+  ) => {
     const newEvents = [...events]
+    const updatedProperty = { ...newEvents[eventIndex].properties[propertyIndex] }
+
+    if (field === "isLookalike" && typeof value === "boolean" && !value) {
+      delete updatedProperty.lookalikeType
+      delete updatedProperty.lookalikeValues
+      delete updatedProperty.lookalikeRange
+    } else if (field === "lookalikeType" && (value === "set" || value === "range")) {
+      delete updatedProperty.lookalikeValues
+      delete updatedProperty.lookalikeRange
+      updatedProperty.lookalikeType = value
+    } else if (field === "lookalikeRange" && typeof value === "object" && "min" in value && "max" in value) {
+      updatedProperty.lookalikeRange = value
+    } else if (field === "lookalikeValues" && Array.isArray(value)) {
+      updatedProperty.lookalikeValues = value
+    } else if (typeof value === "string" || typeof value === "boolean") {
+      ;(updatedProperty as any)[field] = value
+    }
+
     newEvents[eventIndex] = {
       ...newEvents[eventIndex],
       properties: newEvents[eventIndex].properties.map((prop, index) =>
-        index === propertyIndex ? { ...prop, [field]: value } : prop
-      )
+        index === propertyIndex ? updatedProperty : prop,
+      ),
     }
+
     setEvents(newEvents)
   }
 
@@ -80,26 +119,45 @@ export default function Component() {
     const newEvents = [...events]
     newEvents[eventIndex] = {
       ...newEvents[eventIndex],
-      properties: newEvents[eventIndex].properties.filter((_, index) => index !== propertyIndex)
+      properties: newEvents[eventIndex].properties.filter((_, index) => index !== propertyIndex),
     }
     setEvents(newEvents)
   }
 
   const resetEvents = () => {
-    setEvents([{
-      event_name: '',
-      timestamp: convertToLocalTimeISO(new Date()),
-      properties: [],
-      idempotency_key: uuidv4(),
-      external_customer_id: ''
-    }])
+    setEvents([
+      {
+        event_name: "",
+        timestamp: convertToLocalTimeISO(new Date()),
+        properties: [],
+        idempotency_key: uuidv4(),
+        external_customer_id: "",
+      },
+    ])
   }
 
   const generateLookalikeEvents = (templateEvent: Event, count: number): Event[] => {
     return Array.from({ length: count }, () => ({
       ...templateEvent,
       idempotency_key: uuidv4(),
-      timestamp: new Date(templateEvent.timestamp).toISOString()
+      timestamp: new Date(templateEvent.timestamp).toISOString(),
+      properties: templateEvent.properties.map((prop) => {
+        if (prop.isLookalike) {
+          if (prop.lookalikeType === "set" && prop.lookalikeValues) {
+            return {
+              ...prop,
+              value: prop.lookalikeValues[Math.floor(Math.random() * prop.lookalikeValues.length)],
+            }
+          } else if (prop.lookalikeType === "range" && prop.lookalikeRange) {
+            const { min, max } = prop.lookalikeRange
+            return {
+              ...prop,
+              value: String(Math.floor(Math.random() * (max - min + 1) + min)),
+            }
+          }
+        }
+        return prop
+      }),
     }))
   }
 
@@ -107,36 +165,25 @@ export default function Component() {
     e.preventDefault()
     setApiResponse(null)
 
-    // Validate required fields
-    const isValid = events.every(event => 
-      event.event_name && event.timestamp && event.external_customer_id
-    )
+    const isValid = events.every((event) => event.event_name && event.timestamp && event.external_customer_id)
     if (!isValid) {
-      setApiResponse('Please fill in all required fields (Event Name, Timestamp, and External Customer ID)')
+      setApiResponse("Please fill in all required fields (Event Name, Timestamp, and External Customer ID)")
       return
     }
 
-    // Generate lookalike events
-    const allEvents = [
-      ...events,
-      ...generateLookalikeEvents(events[events.length - 1], generatedEventCount)
-    ]
+    const allEvents = [...events, ...generateLookalikeEvents(events[events.length - 1], generatedEventCount)]
 
-    // Convert properties array to object
-    const formattedEvents = allEvents.map(event => ({
+    const formattedEvents = allEvents.map((event) => ({
       ...event,
-      properties: Object.fromEntries(event.properties.map(prop => [prop.key, prop.value])),
-      // Convert timestamps to ISO8601UTC format
-      timestamp: DateTime.fromISO(event.timestamp, { zone: 'local' })
-      .toUTC()
-      .toISO(),
+      properties: Object.fromEntries(event.properties.map((prop) => [prop.key, prop.value])),
+      timestamp: new Date(event.timestamp).toISOString(),
     }))
 
     try {
-      const response = await fetch('/api/send-events', {
-        method: 'POST',
+      const response = await fetch("/api/send-events", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ events: formattedEvents }),
       })
@@ -144,14 +191,16 @@ export default function Component() {
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to submit events')
+        throw new Error(result.message || "Failed to submit events")
       }
 
-      setApiResponse(`Successfully processed ${result.count} events. Orb API Response: ${JSON.stringify(result.orbResponse)}`)
+      setApiResponse(
+        `Successfully processed ${result.count} events. Orb API Response: ${JSON.stringify(result.orbResponse)}`,
+      )
       resetEvents()
     } catch (error) {
-      console.error('Error submitting events:', error)
-      setApiResponse(`Failed to submit events: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error("Error submitting events:", error)
+      setApiResponse(`Failed to submit events: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
@@ -164,13 +213,12 @@ export default function Component() {
               <CardTitle>Event {eventIndex + 1}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Other inputs remain the same */}
               <div className="space-y-2">
                 <Label htmlFor={`event-name-${eventIndex}`}>Event Name *</Label>
                 <Input
                   id={`event-name-${eventIndex}`}
                   value={event.event_name}
-                  onChange={(e) => updateEvent(eventIndex, 'event_name', e.target.value)}
+                  onChange={(e) => updateEvent(eventIndex, "event_name", e.target.value)}
                   required
                 />
               </div>
@@ -179,11 +227,11 @@ export default function Component() {
                 <Input
                   id={`timestamp-${eventIndex}`}
                   type="datetime-local"
-                  value={event.timestamp.slice(0, 16)} // Only show date and time for input
+                  value={event.timestamp.slice(0, 16)}
                   onChange={(e) => {
-                    const localDate = new Date(e.target.value);
-                    const isoTimestamp = convertToLocalTimeISO(localDate);
-                    updateEvent(eventIndex, 'timestamp', isoTimestamp);
+                    const localDate = new Date(e.target.value)
+                    const isoTimestamp = convertToLocalTimeISO(localDate)
+                    updateEvent(eventIndex, "timestamp", isoTimestamp)
                   }}
                   required
                 />
@@ -193,7 +241,7 @@ export default function Component() {
                 <Input
                   id={`external-customer-id-${eventIndex}`}
                   value={event.external_customer_id}
-                  onChange={(e) => updateEvent(eventIndex, 'external_customer_id', e.target.value)}
+                  onChange={(e) => updateEvent(eventIndex, "external_customer_id", e.target.value)}
                   required
                 />
               </div>
@@ -208,37 +256,129 @@ export default function Component() {
                     <TableRow>
                       <TableHead>Key</TableHead>
                       <TableHead>Value</TableHead>
+                      <TableHead>Lookalike</TableHead>
                       <TableHead className="w-[100px]">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {event.properties.map((prop, propIndex) => (
-                      <TableRow key={propIndex}>
-                        <TableCell>
-                          <Input
-                            placeholder="Key"
-                            value={prop.key}
-                            onChange={(e) => updateProperty(eventIndex, propIndex, 'key', e.target.value)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            placeholder="Value"
-                            value={prop.value}
-                            onChange={(e) => updateProperty(eventIndex, propIndex, 'value', e.target.value)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button 
-                            type="button" 
-                            variant="destructive" 
-                            onClick={() => removeProperty(eventIndex, propIndex)}
-                            className="w-full"
-                          >
-                            Remove
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                      <>
+                        <TableRow key={`${eventIndex}-${propIndex}`}>
+                          <TableCell>
+                            <Input
+                              placeholder="Key"
+                              value={prop.key}
+                              onChange={(e) => updateProperty(eventIndex, propIndex, "key", e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              placeholder="Value"
+                              value={prop.value}
+                              onChange={(e) => updateProperty(eventIndex, propIndex, "value", e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={prop.isLookalike || false}
+                                onChange={(e) => {
+                                  updateProperty(eventIndex, propIndex, "isLookalike", e.target.checked)
+                                  if (e.target.checked && !prop.lookalikeType) {
+                                    updateProperty(eventIndex, propIndex, "lookalikeType", "set")
+                                  }
+                                }}
+                              />
+                              <Label>Lookalike</Label>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              onClick={() => removeProperty(eventIndex, propIndex)}
+                              className="w-full"
+                            >
+                              Remove
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        {prop.isLookalike && (
+                          <TableRow>
+                            <TableCell colSpan={4}>
+                              <div className="space-y-2">
+                                <Select
+                                  value={prop.lookalikeType || "set"}
+                                  onValueChange={(value) =>
+                                    updateProperty(eventIndex, propIndex, "lookalikeType", value as "set" | "range")
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={`Select lookalike type for ${prop.key}`} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="set">Set of Values</SelectItem>
+                                    <SelectItem value="range">Range of Integers</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {prop.lookalikeType === "set" && (
+                                  <div>
+                                    <Label htmlFor={`lookalike-values-${eventIndex}-${propIndex}`}>
+                                      Select a set of values for {prop.key}
+                                    </Label>
+                                    <Input
+                                      id={`lookalike-values-${eventIndex}-${propIndex}`}
+                                      placeholder="Values (comma-separated)"
+                                      value={prop.lookalikeValues?.join(", ") || ""}
+                                      onChange={(e) =>
+                                        updateProperty(
+                                          eventIndex,
+                                          propIndex,
+                                          "lookalikeValues",
+                                          e.target.value.split(",").map((v) => v.trim()),
+                                        )
+                                      }
+                                    />
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      Enter values separated by commas, e.g., "apple, banana, cherry"
+                                    </p>
+                                  </div>
+                                )}
+                                {prop.lookalikeType === "range" && (
+                                  <div className="space-y-2">
+                                    <Label>Select a range of integers for {prop.key}</Label>
+                                    <div className="flex space-x-2">
+                                      <Input
+                                        type="number"
+                                        placeholder="Min"
+                                        value={prop.lookalikeRange?.min || ""}
+                                        onChange={(e) =>
+                                          updateProperty(eventIndex, propIndex, "lookalikeRange", {
+                                            min: Number(e.target.value),
+                                            max: prop.lookalikeRange?.max ?? 0,
+                                          })
+                                        }
+                                      />
+                                      <Input
+                                        type="number"
+                                        placeholder="Max"
+                                        value={prop.lookalikeRange?.max || ""}
+                                        onChange={(e) =>
+                                          updateProperty(eventIndex, propIndex, "lookalikeRange", {
+                                            min: prop.lookalikeRange?.min ?? 0,
+                                            max: Number(e.target.value),
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
                     ))}
                   </TableBody>
                 </Table>
@@ -246,14 +386,9 @@ export default function Component() {
                   Add Property
                 </Button>
               </div>
-              {/* Add the remove button only if it's not the first event */}
               {eventIndex > 0 && (
                 <div className="flex justify-end">
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    onClick={() => removeEvent(eventIndex)}
-                  >
+                  <Button type="button" variant="destructive" onClick={() => removeEvent(eventIndex)}>
                     Remove Event
                   </Button>
                 </div>
@@ -262,7 +397,9 @@ export default function Component() {
           </Card>
         ))}
         <div className="flex justify-between items-center">
-          <Button type="button" onClick={addEvent}>Add Another Event</Button>
+          <Button type="button" onClick={addEvent}>
+            Add Another Event
+          </Button>
           <Button type="submit">Submit</Button>
         </div>
         <Card className="w-full mt-8">
@@ -272,10 +409,13 @@ export default function Component() {
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Label htmlFor="auto-event-count">Number of lookalike events to generate:</Label>
-              <Select value={autoEventCount} onValueChange={(value) => {
-                setAutoEventCount(value);
-                setGeneratedEventCount(parseInt(value));
-              }}>
+              <Select
+                value={autoEventCount}
+                onValueChange={(value) => {
+                  setAutoEventCount(value)
+                  setGeneratedEventCount(Number.parseInt(value))
+                }}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select count" />
                 </SelectTrigger>
@@ -289,9 +429,9 @@ export default function Component() {
               </Select>
             </div>
             <p>
-              {generatedEventCount > 0 
-                ? `${generatedEventCount} lookalike event${generatedEventCount > 1 ? 's' : ''} will be generated and included in the submission.`
-                : 'No lookalike events will be generated.'}
+              {generatedEventCount > 0
+                ? `${generatedEventCount} lookalike event${generatedEventCount > 1 ? "s" : ""} will be generated and included in the submission.`
+                : "No lookalike events will be generated."}
             </p>
           </CardContent>
         </Card>
@@ -305,3 +445,14 @@ export default function Component() {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
