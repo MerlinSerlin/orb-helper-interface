@@ -340,7 +340,7 @@ export default function Component() {
                                       }
                                     />
                                     <p className="text-sm text-muted-foreground mt-1">
-                                      Enter values separated by commas, e.g., 'apple, banana, cherry'
+                                      {`Enter values separated by commas, e.g., "apple, banana, cherry"`}
                                     </p>
                                   </div>
                                 )}
