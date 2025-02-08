@@ -12,12 +12,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { convertToLocalTimeISO } from "@/lib/utils"
 
 type Property = {
-  key: string
-  value: string
-  isLookalike?: boolean
-  lookalikeType?: "set" | "range"
-  lookalikeValues?: string[]
-  lookalikeRange?: { min: number; max: number }
+  key: string;
+  value: string;
+  isLookalike?: boolean;
+  lookalikeType?: "set" | "range";
+  lookalikeValues?: string[];
+  lookalikeRange?: LookalikeRange;
+  [key: string]: string | boolean | string[] | LookalikeRange | undefined;
 }
 
 type Event = {
@@ -28,12 +29,10 @@ type Event = {
   external_customer_id: string
 }
 
-type LookalikeValueSet = {
-  key: string
-  type: "set" | "range"
-  values: string[]
-  range?: { min: number; max: number }
-}
+type LookalikeRange = {
+  min: number;
+  max: number;
+};
 
 export default function Component() {
   const [events, setEvents] = useState<Event[]>([
@@ -84,10 +83,10 @@ export default function Component() {
     eventIndex: number,
     propertyIndex: number,
     field: keyof Property,
-    value: string | boolean | { min: number; max: number } | string[] | undefined,
-  ) => {
+    value: string | boolean | LookalikeRange | string[] | undefined,
+) => {
     const newEvents = [...events]
-    const updatedProperty = { ...newEvents[eventIndex].properties[propertyIndex] }
+    const updatedProperty = { ...newEvents[eventIndex].properties[propertyIndex] } as Property
 
     if (field === "isLookalike" && typeof value === "boolean" && !value) {
       delete updatedProperty.lookalikeType
@@ -98,11 +97,11 @@ export default function Component() {
       delete updatedProperty.lookalikeRange
       updatedProperty.lookalikeType = value
     } else if (field === "lookalikeRange" && typeof value === "object" && "min" in value && "max" in value) {
-      updatedProperty.lookalikeRange = value
+      updatedProperty.lookalikeRange = value as LookalikeRange
     } else if (field === "lookalikeValues" && Array.isArray(value)) {
       updatedProperty.lookalikeValues = value
     } else if (typeof value === "string" || typeof value === "boolean") {
-      ;(updatedProperty as any)[field] = value
+      updatedProperty[field] = value
     }
 
     newEvents[eventIndex] = {
@@ -113,7 +112,7 @@ export default function Component() {
     }
 
     setEvents(newEvents)
-  }
+}
 
   const removeProperty = (eventIndex: number, propertyIndex: number) => {
     const newEvents = [...events]
