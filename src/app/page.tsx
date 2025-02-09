@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Fragment } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,22 +11,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { convertToLocalTimeISO } from "@/lib/utils"
 
-type Property = {
-  key: string;
-  value: string;
-  isLookalike?: boolean;
-  lookalikeType?: "set" | "range";
-  lookalikeValues?: string[];
-  lookalikeRange?: LookalikeRange;
-  [key: string]: string | boolean | string[] | LookalikeRange | undefined;
-}
-
 type Event = {
   event_name: string
   timestamp: string
   properties: Property[]
   idempotency_key: string
   external_customer_id: string
+}
+
+type Property = {
+  key: string;
+  value: string;
+  isLookalike: boolean;  // Change from optional to required, defaulting to false
+  lookalikeType?: "set" | "range";
+  lookalikeValues?: string[];
+  lookalikeRange?: LookalikeRange;
+  [key: string]: string | boolean | string[] | LookalikeRange | undefined;
 }
 
 type LookalikeRange = {
@@ -75,7 +75,15 @@ export default function Component() {
 
   const addProperty = (eventIndex: number) => {
     const newEvents = [...events]
-    newEvents[eventIndex].properties.push({ key: "", value: "" })
+    const newProperty = {
+      key: "",
+      value: "",
+      isLookalike: false,
+      lookalikeType: undefined,
+      lookalikeValues: undefined,
+      lookalikeRange: undefined
+    }
+    newEvents[eventIndex].properties.push(newProperty)
     setEvents(newEvents)
   }
 
@@ -84,35 +92,45 @@ export default function Component() {
     propertyIndex: number,
     field: keyof Property,
     value: string | boolean | LookalikeRange | string[] | undefined,
-) => {
-    const newEvents = [...events]
-    const updatedProperty = { ...newEvents[eventIndex].properties[propertyIndex] } as Property
-
-    if (field === "isLookalike" && typeof value === "boolean" && !value) {
-      delete updatedProperty.lookalikeType
-      delete updatedProperty.lookalikeValues
-      delete updatedProperty.lookalikeRange
-    } else if (field === "lookalikeType" && (value === "set" || value === "range")) {
-      delete updatedProperty.lookalikeValues
-      delete updatedProperty.lookalikeRange
-      updatedProperty.lookalikeType = value
-    } else if (field === "lookalikeRange" && typeof value === "object" && "min" in value && "max" in value) {
-      updatedProperty.lookalikeRange = value as LookalikeRange
-    } else if (field === "lookalikeValues" && Array.isArray(value)) {
-      updatedProperty.lookalikeValues = value
-    } else if (typeof value === "string" || typeof value === "boolean") {
-      updatedProperty[field] = value
+  ) => {
+    // console.log('updateProperty called:', { field, value }); // Debug log
+    const newEvents = [...events];
+    const updatedProperty = { ...newEvents[eventIndex].properties[propertyIndex] } as Property;
+  
+    if (field === "lookalikeType") {
+      updatedProperty.lookalikeType = value as "set" | "range";
+      // Clear the previous values when switching types
+      if (value === "set") {
+        updatedProperty.lookalikeRange = undefined;
+        updatedProperty.lookalikeValues = [];
+      } else if (value === "range") {
+        updatedProperty.lookalikeValues = undefined;
+        updatedProperty.lookalikeRange = { min: 0, max: 0 };
+      }
+    } else if (field === "lookalikeRange") {
+      updatedProperty.lookalikeRange = value as LookalikeRange;
+    } else if (field === "lookalikeValues") {
+      updatedProperty.lookalikeValues = value as string[];
+    } else if (field === "isLookalike") {
+      updatedProperty.isLookalike = Boolean(value);
+      if (!value) {
+        updatedProperty.lookalikeType = undefined;
+        updatedProperty.lookalikeValues = undefined;
+        updatedProperty.lookalikeRange = undefined;
+      }
+    } else {
+      updatedProperty[field] = value as string;
     }
-
+  
     newEvents[eventIndex] = {
       ...newEvents[eventIndex],
       properties: newEvents[eventIndex].properties.map((prop, index) =>
-        index === propertyIndex ? updatedProperty : prop,
+        index === propertyIndex ? updatedProperty : prop
       ),
-    }
-
-    setEvents(newEvents)
-}
+    };
+  
+    setEvents(newEvents);
+  };
 
   const removeProperty = (eventIndex: number, propertyIndex: number) => {
     const newEvents = [...events]
@@ -245,52 +263,89 @@ export default function Component() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Idempotency Key (auto-generated)</Label>
-                <Input value={event.idempotency_key} disabled />
+                <Label htmlFor={`idempotency-key-${eventIndex}`}>Idempotency Key (auto-generated)</Label>
+                <Input 
+                  id={`idempotency-key-${eventIndex}`}
+                  name={`idempotency-key-${eventIndex}`}
+                  value={event.idempotency_key} 
+                  disabled 
+                />
               </div>
               <div className="space-y-2">
-                <Label>Properties</Label>
-                <Table>
+                <h3 className="text-sm font-medium leading-none">Properties</h3>
+                <Table aria-label={`Properties for Event ${eventIndex + 1}`}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Key</TableHead>
                       <TableHead>Value</TableHead>
-                      <TableHead>Lookalike</TableHead>
+                      <TableHead>Options</TableHead>
                       <TableHead className="w-[100px]">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {event.properties.map((prop, propIndex) => (
-                      <>
-                        <TableRow key={`${eventIndex}-${propIndex}`}>
+                      <Fragment key={`${eventIndex}-${propIndex}`}>
+                        <TableRow>
                           <TableCell>
                             <Input
+                              id={`property-key-${eventIndex}-${propIndex}`}
+                              name={`property-key-${eventIndex}-${propIndex}`}
                               placeholder="Key"
                               value={prop.key}
                               onChange={(e) => updateProperty(eventIndex, propIndex, "key", e.target.value)}
+                              aria-label="Property Key"
                             />
                           </TableCell>
                           <TableCell>
                             <Input
+                              id={`property-value-${eventIndex}-${propIndex}`}
+                              name={`property-value-${eventIndex}-${propIndex}`}
                               placeholder="Value"
                               value={prop.value}
                               onChange={(e) => updateProperty(eventIndex, propIndex, "value", e.target.value)}
+                              aria-label="Property Value"
                             />
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                checked={prop.isLookalike || false}
-                                onChange={(e) => {
-                                  updateProperty(eventIndex, propIndex, "isLookalike", e.target.checked)
-                                  if (e.target.checked && !prop.lookalikeType) {
-                                    updateProperty(eventIndex, propIndex, "lookalikeType", "set")
-                                  }
-                                }}
-                              />
-                              <Label>Lookalike</Label>
-                            </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`lookalike-checkbox-${eventIndex}-${propIndex}`}
+                              name={`lookalike-checkbox-${eventIndex}-${propIndex}`}
+                              checked={Boolean(prop.isLookalike)}
+                              disabled={!prop.key} // Disable if no key is entered
+                              onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                const newEvents = [...events];
+                                const updatedProperty = { ...newEvents[eventIndex].properties[propIndex] } as Property;
+                                
+                                updatedProperty.isLookalike = isChecked;
+                                if (isChecked) {
+                                  updatedProperty.lookalikeType = "set";
+                                } else {
+                                  updatedProperty.lookalikeType = undefined;
+                                  updatedProperty.lookalikeValues = undefined;
+                                  updatedProperty.lookalikeRange = undefined;
+                                }
+
+                                newEvents[eventIndex] = {
+                                  ...newEvents[eventIndex],
+                                  properties: newEvents[eventIndex].properties.map((prop, index) =>
+                                    index === propIndex ? updatedProperty : prop
+                                  ),
+                                };
+
+                                setEvents(newEvents);
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-600"
+                            />
+                            <Label 
+                              htmlFor={`lookalike-checkbox-${eventIndex}-${propIndex}`}
+                              className={`text-sm ${!prop.key ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} // Dim the label if disabled
+                            >
+                              Randomize values for lookalike
+                            </Label>
+                          </div>
                           </TableCell>
                           <TableCell>
                             <Button
@@ -303,17 +358,25 @@ export default function Component() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                        {prop.isLookalike && (
+                        {(prop.isLookalike === true) && (
                           <TableRow>
                             <TableCell colSpan={4}>
                               <div className="space-y-2">
+                                <p className="text-sm font-medium leading-none">
+                                  Select lookalike type for {prop.key}
+                                </p>
                                 <Select
+                                  name={`lookalike-type-${eventIndex}-${propIndex}`}
                                   value={prop.lookalikeType || "set"}
-                                  onValueChange={(value) =>
-                                    updateProperty(eventIndex, propIndex, "lookalikeType", value as "set" | "range")
-                                  }
+                                  onValueChange={(value) => {
+                                    // console.log('Selected value:', value); // Debug log
+                                    updateProperty(eventIndex, propIndex, "lookalikeType", value as "set" | "range");
+                                  }}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger 
+                                    id={`lookalike-type-select-${eventIndex}-${propIndex}`}
+                                    aria-label={`Select lookalike type for ${prop.key}`}
+                                  >
                                     <SelectValue placeholder={`Select lookalike type for ${prop.key}`} />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -321,55 +384,65 @@ export default function Component() {
                                     <SelectItem value="range">Range of Integers</SelectItem>
                                   </SelectContent>
                                 </Select>
+
                                 {prop.lookalikeType === "set" && (
                                   <div>
-                                    <Label htmlFor={`lookalike-values-${eventIndex}-${propIndex}`}>
-                                      Select a set of values for {prop.key}
-                                    </Label>
                                     <Input
                                       id={`lookalike-values-${eventIndex}-${propIndex}`}
-                                      placeholder="Values (comma-separated)"
+                                      name={`lookalike-values-${eventIndex}-${propIndex}`}
+                                      placeholder={`Enter values for ${prop.key} separated by commas, e.g., "apple, banana, cherry"`}
                                       value={prop.lookalikeValues?.join(", ") || ""}
                                       onChange={(e) =>
                                         updateProperty(
                                           eventIndex,
                                           propIndex,
                                           "lookalikeValues",
-                                          e.target.value.split(",").map((v) => v.trim()),
+                                          e.target.value.split(",").map((v) => v.trim())
                                         )
                                       }
                                     />
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {`Enter values separated by commas, e.g., "apple, banana, cherry"`}
-                                    </p>
                                   </div>
                                 )}
+
                                 {prop.lookalikeType === "range" && (
                                   <div className="space-y-2">
-                                    <Label>Select a range of integers for {prop.key}</Label>
                                     <div className="flex space-x-2">
-                                      <Input
-                                        type="number"
-                                        placeholder="Min"
-                                        value={prop.lookalikeRange?.min || ""}
-                                        onChange={(e) =>
-                                          updateProperty(eventIndex, propIndex, "lookalikeRange", {
-                                            min: Number(e.target.value),
-                                            max: prop.lookalikeRange?.max ?? 0,
-                                          })
-                                        }
-                                      />
-                                      <Input
-                                        type="number"
-                                        placeholder="Max"
-                                        value={prop.lookalikeRange?.max || ""}
-                                        onChange={(e) =>
-                                          updateProperty(eventIndex, propIndex, "lookalikeRange", {
-                                            min: prop.lookalikeRange?.min ?? 0,
-                                            max: Number(e.target.value),
-                                          })
-                                        }
-                                      />
+                                      <div className="space-y-1">
+                                      <Label htmlFor={`range-min-${eventIndex}-${propIndex}`}>
+                                        Enter minimum value for {prop.key}
+                                      </Label>
+                                        <Input
+                                          type="number"
+                                          id={`range-min-${eventIndex}-${propIndex}`}
+                                          name={`range-min-${eventIndex}-${propIndex}`}
+                                          placeholder="Min"
+                                          value={prop.lookalikeRange?.min || ""}
+                                          onChange={(e) =>
+                                            updateProperty(eventIndex, propIndex, "lookalikeRange", {
+                                              min: Number(e.target.value),
+                                              max: prop.lookalikeRange?.max ?? 0,
+                                            })
+                                          }
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                      <Label htmlFor={`range-min-${eventIndex}-${propIndex}`}>
+                                        Enter maximum value for {prop.key}
+                                      </Label>
+                                        <Input
+                                          type="number"
+                                          id={`range-max-${eventIndex}-${propIndex}`}
+                                          name={`range-max-${eventIndex}-${propIndex}`}
+                                          placeholder="Max"
+                                          value={prop.lookalikeRange?.max || ""}
+                                          onChange={(e) =>
+                                            updateProperty(eventIndex, propIndex, "lookalikeRange", {
+                                              min: prop.lookalikeRange?.min ?? 0,
+                                              max: Number(e.target.value),
+                                            })
+                                          }
+                                        />
+                                      </div>
                                     </div>
                                   </div>
                                 )}
@@ -377,7 +450,7 @@ export default function Component() {
                             </TableCell>
                           </TableRow>
                         )}
-                      </>
+                      </Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -406,27 +479,28 @@ export default function Component() {
             <CardTitle>Generate Lookalike Events</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <Label htmlFor="auto-event-count">Number of lookalike events to generate:</Label>
-              <Select
-                value={autoEventCount}
-                onValueChange={(value) => {
-                  setAutoEventCount(value)
-                  setGeneratedEventCount(Number.parseInt(value))
-                }}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select count" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex items-center space-x-4">
+            <Label htmlFor="auto-event-count-select">Number of lookalike events to generate:</Label>
+            <Select
+              name="auto-event-count"
+              value={autoEventCount}
+              onValueChange={(value) => {
+                setAutoEventCount(value)
+                setGeneratedEventCount(Number.parseInt(value))
+              }}
+            >
+              <SelectTrigger id="auto-event-count-select" className="w-[180px]">
+                <SelectValue placeholder="Select count" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
             <p>
               {generatedEventCount > 0
                 ? `${generatedEventCount} lookalike event${generatedEventCount > 1 ? "s" : ""} will be generated and included in the submission.`
