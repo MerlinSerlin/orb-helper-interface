@@ -22,15 +22,24 @@ const RequestSchema = z.object({
   events: z.array(EventSchema)
 })
 
-export type ServerActionResponse = {
-  success: boolean
-  message: string
-  count?: number
-  orbResponse?: any
-  error?: any
-}
+type OrbResponseData = {
+    // Define the shape of your Orb API response
+    status: string;
+    message: string;
+    // Add other fields that come back from Orb
+  }
+  
+  export type ServerActionResponse = {
+    success: boolean;
+    message: string;
+    count?: number;
+    orbResponse?: OrbResponseData;
+    error?: unknown;
+  }
 
-export async function submitEvents(events: z.infer<typeof RequestSchema>['events']): Promise<ServerActionResponse> {
+  export async function submitEvents(
+    events: z.infer<typeof RequestSchema>['events']
+  ): Promise<ServerActionResponse>{
   if (!ORB_API_TOKEN) {
     console.error('ORB_API_TOKEN is not set in the environment variables')
     return {

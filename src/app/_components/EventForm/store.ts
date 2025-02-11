@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import { type Event, type Property } from '@/types/events'
+import { type Event, type Property, type LookalikeRange } from '@/types/events'
 import { convertToLocalTimeISO } from '@/lib/utils'
 
 interface EventState {
@@ -24,7 +24,7 @@ interface EventActions {
     eventIndex: number,
     propertyIndex: number,
     field: keyof Property,
-    value: any
+    value: string | boolean | string[] | LookalikeRange | undefined
   ) => void
   removeProperty: (eventIndex: number, propertyIndex: number) => void
   

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import { Event, Property } from '@/types/events'
+import { Event, Property, LookalikeRange } from '@/types/events'
 import { convertToLocalTimeISO } from '@/lib/utils'
 
 interface EventStore {
@@ -14,7 +14,7 @@ interface EventStore {
     eventIndex: number,
     propertyIndex: number,
     field: keyof Property,
-    value: any
+    value: string | boolean | string[] | LookalikeRange | undefined
   ) => void
   removeProperty: (eventIndex: number, propertyIndex: number) => void
   setGeneratedEventCount: (count: number) => void
