@@ -160,12 +160,6 @@ export const useEventStore = create<EventStore>((set) => ({
   })
 }))
 
-// Optional: Add devtools middleware for development
-if (process.env.NODE_ENV === 'development') {
-  const { devtools } = require('zustand/middleware')
-  useEventStore.setState = devtools(useEventStore.setState)
-}
-
 // Selectors for performance optimization
 export const selectEvents = (state: EventStore) => state.events
 export const selectGeneratedEventCount = (state: EventStore) => state.generatedEventCount
