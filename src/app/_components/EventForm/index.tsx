@@ -183,7 +183,7 @@ export function EventForm() {
                                 </Select>
                                 {prop.lookalikeType === "set" && (
                                   <Input
-                                    placeholder="Enter values separated by commas (e.g. 'apple, banana, cherry')"
+                                    placeholder="Enter values separated by commas (e.g. apple, banana, cherry)"
                                     value={prop.lookalikeValues?.join(", ") || ""}
                                     onChange={(e) =>
                                       updateProperty(
