@@ -49,7 +49,7 @@ export function EventForm() {
         {events.map((event, eventIndex) => (
           <Card key={event.idempotency_key} className="w-full">
             <CardHeader>
-              <CardTitle>Event {eventIndex + 1}</CardTitle>
+              <CardTitle>Model Your Event</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

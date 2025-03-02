@@ -20,3 +20,9 @@ export type LookalikeRange = {
     idempotency_key: string;
     external_customer_id: string;
   };
+
+  export interface EventSubmissionResponse {
+    success: boolean;
+    message?: string;
+    data?: any;
+  }
