@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import fs from 'fs/promises'
 import path from 'path'
 import { validateStartDate, validateEndDate } from '@/lib/utils'
+import { existsSync } from 'fs'
 
 export async function POST(request: Request) {
   try {
@@ -90,22 +91,61 @@ export async function POST(request: Request) {
 
     // Not in test mode, proceed with actual script execution
     
-    // Create a configuration file for the Python script
-    const tempDir = path.join(process.cwd(), 'tmp')
-    await fs.mkdir(tempDir, { recursive: true })
+    // Get the root directory of the project
+    const rootDir = process.cwd()
+    console.log('Root directory:', rootDir)
     
+    // Create the tmp directory if it doesn't exist
+    const tempDir = path.join(rootDir, 'tmp')
+    await fs.mkdir(tempDir, { recursive: true })
+    console.log('Tmp directory created/verified at:', tempDir)
+    
+    // The full path to the config file
     const configFilePath = path.join(tempDir, `${jobId}_config.json`)
     
     // Write the configuration to a file
     await fs.writeFile(configFilePath, JSON.stringify(scriptConfig, null, 2))
     console.log(`Config file created at: ${configFilePath}`)
 
+    // Get script path from environment variables or use default
+    const scriptPath = process.env.PYTHON_BACKFILL_SCRIPT_PATH || 
+                       path.join(rootDir, 'src', 'scripts', 'Backfills', 'new_backfill_events.py')
+    console.log(`Looking for script at: ${scriptPath}`)
+    
+    // Check if the script exists at the expected location
+    if (!existsSync(scriptPath)) {
+      console.error(`Script not found at: ${scriptPath}`)
+      return NextResponse.json({
+        success: false,
+        message: `Python script not found at the configured path: ${scriptPath}. Please check your PYTHON_BACKFILL_SCRIPT_PATH environment variable.`,
+        jobId
+      }, { status: 500 })
+    }
+    
+    console.log(`Script found at: ${scriptPath}`)
+
     // Execute the Python script with the config file
-    const command = `python3 ./scripts/new_backfill_events.py --config-file ${configFilePath}`
+    const command = `python3 "${scriptPath}" --config-file "${configFilePath}"`
     console.log(`Executing command: ${command}`)
     
-    // Start the process asynchronously
-    exec(command, (error, stdout, stderr) => {
+    // Get the API token from environment variables
+    const orbApiToken = process.env.ORB_API_TOKEN
+    if (!orbApiToken) {
+      console.warn('ORB_API_TOKEN environment variable is not set')
+    } else {
+      console.log('ORB_API_TOKEN is available')
+    }
+    
+    // Start the process asynchronously with environment variables
+    exec(command, { 
+      env: { 
+        ...process.env,
+        // Make sure the API token is available to the Python script
+        // Set both possible variable names to ensure compatibility
+        ORB_API_KEY: orbApiToken, 
+        ORB_API_TOKEN: orbApiToken
+      } 
+    }, (error, stdout, stderr) => {
       if (error) {
         console.error(`Backfill error: ${error}`)
         // In a production system, you would update the job status in a database

@@ -109,8 +109,10 @@ export function getMaximumBackfillDate(format: 'date' | 'iso' | 'iso-date' = 'is
   }
 }
 
+// Add to lib/utils.ts
+
 /**
- * Validates the start date for a backfill
+ * Validates the start date for a backfill, ensuring it's not in the future or too far in the past
  * @param startDate The start date to validate
  * @returns Object containing validation status and error message if applicable
  */
@@ -124,10 +126,16 @@ export function validateStartDate(startDate: string): { isValid: boolean; errorM
     return { isValid: false, errorMessage: 'Invalid date format' };
   }
   
-  // Check if date is in the future
+  // Check if date is in the future or within the grace period
   const now = new Date();
-  if (dateObj > now) {
-    return { isValid: false, errorMessage: 'Start date cannot be in the future' };
+  // Add a 12-hour grace period as required by Orb API
+  const gracePeriod = new Date(now.getTime() - (12 * 60 * 60 * 1000)); // 12 hours ago
+  
+  if (dateObj > gracePeriod) {
+    return { 
+      isValid: false, 
+      errorMessage: 'Start date must be at least 12 hours in the past due to Orb API requirements' 
+    };
   }
   
   // Check if date is more than 90 days in the past
@@ -141,7 +149,7 @@ export function validateStartDate(startDate: string): { isValid: boolean; errorM
 }
 
 /**
- * Validates the end date for a backfill
+ * Validates the end date for a backfill, ensuring it's after the start date and not in the future
  * @param endDate The end date to validate
  * @param startDate The start date to compare with
  * @returns Object containing validation status and error message if applicable
@@ -157,15 +165,21 @@ export function validateEndDate(endDate: string, startDate: string): { isValid: 
     return { isValid: false, errorMessage: 'Invalid date format' };
   }
   
-  // Check if date is in the future
-  const now = new Date();
-  if (endDateObj > now) {
-    return { isValid: false, errorMessage: 'End date cannot be in the future' };
-  }
-  
   // Check if end date is before start date
   if (endDateObj < startDateObj) {
     return { isValid: false, errorMessage: 'End date and time must be after start date and time' };
+  }
+  
+  // Check if date is in the future or within the grace period
+  const now = new Date();
+  // Add a 12-hour grace period as required by Orb API
+  const gracePeriod = new Date(now.getTime() - (12 * 60 * 60 * 1000)); // 12 hours ago
+  
+  if (endDateObj > gracePeriod) {
+    return { 
+      isValid: false, 
+      errorMessage: 'End date must be at least 12 hours in the past due to Orb API requirements' 
+    };
   }
   
   return { isValid: true };
@@ -198,3 +212,4 @@ export function getMinEndDateTime(startDate: string, endDate: string): string {
   // If same date, end time must be >= start time
   return startDate;
 }
+
