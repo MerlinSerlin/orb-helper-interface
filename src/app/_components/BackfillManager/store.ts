@@ -1,3 +1,5 @@
+// This file not currently in use. Intended for future feature when we want to have status/history of backfills in web app view.
+
 'use client'
 
 import { create } from 'zustand'

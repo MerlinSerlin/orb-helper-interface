@@ -43,8 +43,12 @@ export async function POST(request: Request) {
       )
     }
 
+    // Extract just the date part if full ISO string is provided
+    const startDatePart = start_date.split('T')[0]
+    const endDatePart = end_date.split('T')[0]
+    
     // Validate the start date
-    const startValidation = validateStartDate(start_date)
+    const startValidation = validateStartDate(startDatePart)
     if (!startValidation.isValid) {
       console.log('Invalid start date:', startValidation.errorMessage)
       return NextResponse.json(
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
     }
     
     // Validate the end date
-    const endValidation = validateEndDate(end_date, start_date)
+    const endValidation = validateEndDate(endDatePart, startDatePart)
     if (!endValidation.isValid) {
       console.log('Invalid end date:', endValidation.errorMessage)
       return NextResponse.json(
@@ -72,8 +76,8 @@ export async function POST(request: Request) {
       event_name,
       external_customer_id: external_customer_id || null,
       backfill_customer_id: backfill_customer_id || null,
-      start_date,
-      end_date,
+      start_date: startDatePart, // Use just the date part
+      end_date: endDatePart,     // Use just the date part
       events_per_day: events_per_day || 100,
       properties
     }
@@ -109,7 +113,7 @@ export async function POST(request: Request) {
 
     // Get script path from environment variables or use default
     const scriptPath = process.env.PYTHON_BACKFILL_SCRIPT_PATH || 
-                       path.join(rootDir, 'src', 'scripts', 'Backfills', 'new_backfill_events.py')
+                       path.join(rootDir, 'src', 'scripts', 'Backfills', 'backfill_events.py')
     console.log(`Looking for script at: ${scriptPath}`)
     
     // Check if the script exists at the expected location
@@ -137,7 +141,7 @@ export async function POST(request: Request) {
     }
     
     // Start the process asynchronously with environment variables
-    exec(command, { 
+    const pythonProcess = exec(command, { 
       env: { 
         ...process.env,
         // Make sure the API token is available to the Python script
@@ -145,21 +149,24 @@ export async function POST(request: Request) {
         ORB_API_KEY: orbApiToken, 
         ORB_API_TOKEN: orbApiToken
       } 
-    }, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Backfill error: ${error}`)
-        // In a production system, you would update the job status in a database
-      }
-      console.log(`Backfill output: ${stdout}`)
-      if (stderr) {
-        console.error(`Backfill stderr: ${stderr}`)
-      }
-      
+    });
+
+    // Immediately log output
+    pythonProcess.stdout?.on('data', (data) => {
+      console.log(`Backfill output: ${data}`);
+    });
+
+    pythonProcess.stderr?.on('data', (data) => {
+      console.error(`Backfill error: ${data}`);
+    });
+
+    pythonProcess.on('close', (code) => {
+      console.log(`Backfill process exited with code ${code}`);
       // Clean up the configuration file after script execution
       fs.unlink(configFilePath).catch(error => {
-        console.error(`Error cleaning up config file: ${error}`)
-      })
-    })
+        console.error(`Error cleaning up config file: ${error}`);
+      });
+    });
 
     // Return immediate success response with the job ID
     return NextResponse.json({

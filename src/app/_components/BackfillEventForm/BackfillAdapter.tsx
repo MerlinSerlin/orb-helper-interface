@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { BackfillEventForm } from './BackfillEventForm'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -194,8 +194,8 @@ export function BackfillAdapter() {
       const backfillConfig = {
         event_name: event.event_name,
         external_customer_id: event.external_customer_id,
-        start_date: new Date(startDate).toISOString(),
-        end_date: new Date(endDate).toISOString(),
+        start_date: startDate, // Just use the date string directly
+        end_date: endDate, // Just use the date string directly
         events_per_day: eventsPerDay,
         properties: eventProperties,
         backfill_customer_id: externalCustomerId || null,
@@ -237,21 +237,13 @@ export function BackfillAdapter() {
     }
   };
 
-  // Generate helper text for dates
-  const getEndDateHelperText = () => {
-    if (startDate && endDate && getDatePart(startDate) === getDatePart(endDate)) {
-      return "When using the same date, end time must be after start time.";
-    }
-    return "The end date must be after the start date and cannot be in the future.";
-  };
-
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Backfill Time Range</CardTitle>
+          <CardTitle>Backfill Date Range</CardTitle>
           <CardDescription>
-            Specify the time range for the backfill. Events will be generated with timestamps within this range.
+            Specify the date range for the backfill. Events will be generated with timestamps at noon on each day in this range.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -272,11 +264,11 @@ export function BackfillAdapter() {
                 
                 <Input 
                   id="startDate"
-                  type="datetime-local" 
+                  type="date" // Changed from datetime-local to date
                   value={startDate}
                   onChange={handleStartDateChange}
-                  min={`${minDate}T00:00`}
-                  max={`${maxDate}T23:59`}
+                  min={minDate}
+                  max={maxDate}
                   className={`w-full ${fieldError.startDate ? "border-red-500" : ""}`}
                   required 
                 />
@@ -302,10 +294,10 @@ export function BackfillAdapter() {
                 
                 <Input 
                   id="endDate"
-                  type="datetime-local" 
+                  type="date" // Changed from datetime-local to date
                   value={endDate}
                   onChange={handleEndDateChange}
-                  max={`${maxDate}T23:59`}
+                  max={maxDate}
                   className={`w-full ${fieldError.endDate ? "border-red-500" : ""}`}
                   required 
                   disabled={!startDate} // Disable until start date is set
@@ -316,7 +308,7 @@ export function BackfillAdapter() {
                     <p className="text-sm text-red-500">{fieldError.endDate}</p>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      {getEndDateHelperText()}
+                      The end date must be after the start date and cannot be in the future.
                     </p>
                   )}
                 </div>
@@ -370,7 +362,7 @@ export function BackfillAdapter() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground mt-1">
-              The Python script will generate approximately this many events per day within the specified date range.
+              The Python script will generate this many events per day within the specified date range.
             </p>
           </div>
           
