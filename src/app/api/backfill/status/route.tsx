@@ -1,8 +1,11 @@
-// app/api/backfill/status/route.ts
+// This route is not currently in use. This would be for logging backfill status updates to the webapp. Currently we are logging to the terminal.
+
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import fs from 'fs/promises'
 import path from 'path'
+
+type JobStatusUpdate = z.infer<typeof statusUpdateSchema>;
 
 // Define the status update schema
 const statusUpdateSchema = z.object({
@@ -18,7 +21,7 @@ const statusUpdateSchema = z.object({
 
 // Simple file-based storage for job status
 // In a production app, you'd use a database instead
-async function updateJobInStorage(jobId: string, updates: any) {
+async function updateJobInStorage(jobId: string, updates: Partial<JobStatusUpdate>){
   try {
     const rootDir = process.cwd()
     const storageDir = path.join(rootDir, 'tmp', 'job-status')
@@ -34,7 +37,7 @@ async function updateJobInStorage(jobId: string, updates: any) {
     try {
       const existingData = await fs.readFile(statusFilePath, 'utf-8')
       jobData = JSON.parse(existingData)
-    } catch (error) {
+    } catch (_error) {
       // File probably doesn't exist yet, which is fine
     }
     
@@ -136,7 +139,7 @@ export async function GET(request: Request) {
     const jobStatus = JSON.parse(data)
     
     return NextResponse.json({ success: true, data: jobStatus })
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { success: false, message: 'Job status not found' },
       { status: 404 }

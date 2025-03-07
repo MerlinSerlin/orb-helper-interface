@@ -24,7 +24,7 @@ interface BackfillActions {
 
 type BackfillStore = BackfillState & BackfillActions
 
-export const useBackfillStore = create<BackfillStore>((set, get) => ({
+export const useBackfillStore = create<BackfillStore>((set) => ({
   jobs: [],
   isLoading: false,
   error: null,

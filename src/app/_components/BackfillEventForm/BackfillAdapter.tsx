@@ -11,15 +11,30 @@ import { useBackfillEventStore } from './store'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertCircle } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
+import { BackfillConfig,   } from '@/types/backfill'
+
 import {
   getMinimumBackfillDate,
   getMaximumBackfillDate,
   validateStartDate,
   validateEndDate,
-  getDatePart
 } from '@/lib/utils'
 
 export function BackfillAdapter() {
+    // Define what the test response should look like
+    type TestResponseType = {
+      success: boolean;
+      jobId?: string;
+      config?: BackfillConfig;
+      events?: Array<{
+        event_name: string;
+        external_customer_id: string;
+        timestamp: string;
+        properties: Record<string, string | number | string[]>;
+      }>;
+      message?: string;
+    };
+
   const { event, updateEvent, reset } = useBackfillEventStore()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -33,7 +48,7 @@ export function BackfillAdapter() {
   const [success, setSuccess] = useState<string | null>(null)
   const [externalCustomerId, setExternalCustomerId] = useState('')
   const [testMode, setTestMode] = useState(false)
-  const [testResponse, setTestResponse] = useState<any>(null)
+  const [testResponse, setTestResponse] = useState<TestResponseType | null>(null);
   
   // Get the minimum and maximum allowed dates
   const minDate = getMinimumBackfillDate() as string

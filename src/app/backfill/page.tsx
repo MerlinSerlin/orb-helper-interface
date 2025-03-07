@@ -36,5 +36,5 @@ export default function BackfillPage() {
 // Add metadata
 export const metadata = {
   title: 'Backfill Manager - Orb Helper',
-  description: 'Schedule and monitor historical data backfills to Orb\'s API.'
+  description: 'Schedule and monitor historical data backfills to Orb&apos;s API.'
 }

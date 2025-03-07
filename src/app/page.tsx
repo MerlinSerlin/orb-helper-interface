@@ -18,7 +18,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle>Event Generator</CardTitle>
                 <CardDescription>
-                  Create and send events to Orb's ingestion API
+                  Create and send events to Orb&apos;s ingestion API
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -39,9 +39,9 @@ export default function DashboardPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="mb-4">
-                  Upload historical data for backfilling into Orb's system.
-                </p>
+              <p className="mb-4">
+                Upload historical data for backfilling into Orb&apos;s system.
+              </p>
                 <Link href="/backfill">
                   <Button>Go to Backfill Manager</Button>
                 </Link>

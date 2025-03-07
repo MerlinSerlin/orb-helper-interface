@@ -24,5 +24,5 @@ export type LookalikeRange = {
   export interface EventSubmissionResponse {
     success: boolean;
     message?: string;
-    data?: any;
+    data?: Record<string, unknown>;
   }
