@@ -37,7 +37,7 @@ async function updateJobInStorage(jobId: string, updates: Partial<JobStatusUpdat
     try {
       const existingData = await fs.readFile(statusFilePath, 'utf-8')
       jobData = JSON.parse(existingData)
-    } catch (_error) {
+    } catch (_) {
       // File probably doesn't exist yet, which is fine
     }
     
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
     const jobStatus = JSON.parse(data)
     
     return NextResponse.json({ success: true, data: jobStatus })
-  } catch (_error) {
+  } catch (_) {
     return NextResponse.json(
       { success: false, message: 'Job status not found' },
       { status: 404 }

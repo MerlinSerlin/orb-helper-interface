@@ -11,7 +11,7 @@ import { useBackfillEventStore } from './store'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertCircle } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
-import { BackfillConfig,   } from '@/types/backfill'
+import { BackfillConfig, BackfillPropertyValue  } from '@/types/backfill'
 
 import {
   getMinimumBackfillDate,
@@ -178,7 +178,7 @@ export function BackfillAdapter() {
 
     try {
       // Format the event properties for the Python script
-      const eventProperties: Record<string, any> = {};
+      const eventProperties: Record<string, BackfillPropertyValue> = {};
       
       // Process each property to properly format for the Python script
       event.properties.forEach(prop => {

@@ -11,7 +11,7 @@ export type BackfillConfig = {
 };
 
 // Create a specific type for the property values that can be passed to the Python script
-type BackfillPropertyValue = string | {
+export type BackfillPropertyValue = string | {
   type: 'set';
   values: string[];
 } | {
