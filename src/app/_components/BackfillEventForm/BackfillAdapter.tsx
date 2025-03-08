@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useBackfillEventStore } from './store'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertCircle } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { BackfillConfig, BackfillPropertyValue  } from '@/types/backfill'
@@ -38,7 +37,7 @@ export function BackfillAdapter() {
   const { event, updateEvent, reset } = useBackfillEventStore()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [eventsPerDay, setEventsPerDay] = useState<number>(100)
+  const [eventsPerDayRange, setEventsPerDayRange] = useState<{ min: number; max: number }>({ min: 1, max: 10 })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldError, setFieldError] = useState<{
@@ -211,7 +210,7 @@ export function BackfillAdapter() {
         external_customer_id: event.external_customer_id,
         start_date: startDate, // Just use the date string directly
         end_date: endDate, // Just use the date string directly
-        events_per_day: eventsPerDay,
+        events_per_day: { type: 'range', min: eventsPerDayRange.min, max: eventsPerDayRange.max },
         properties: eventProperties,
         backfill_customer_id: externalCustomerId || null,
         test_mode: testMode // Add test mode flag
@@ -354,33 +353,94 @@ export function BackfillAdapter() {
               When specified, this value will be used for all events and cannot be overridden.
             </p>
           </div>
-          
           <div>
-            <Label htmlFor="events-per-day" className="text-sm font-medium mb-2 block">
-              Events Per Day
-            </Label>
-            <Select
-              value={String(eventsPerDay)}
-              onValueChange={(value) => setEventsPerDay(Number(value))}
-            >
-              <SelectTrigger id="events-per-day" className="w-full md:w-80">
-                <SelectValue placeholder="Select count" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1</SelectItem>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="75">75</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground mt-1">
-              The Python script will generate this many events per day within the specified date range.
-            </p>
+          <div>
+            <div className="mb-4">
+              <Label htmlFor="events-per-day-range" className="text-sm font-medium">
+                Events Per Day Range
+              </Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configure how many events will be generated each day in the date range.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Labels row with warnings on same line */}
+              <div className="flex space-x-2">
+                <div className="w-1/2">
+                  <Label htmlFor="events-min" className="text-sm font-medium">
+                    Minimum events
+                  </Label>
+                </div>
+                <div className="w-1/2">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="events-max" className="text-sm font-medium">
+                      Maximum events
+                    </Label>
+                    <div className="flex items-center text-amber-500 text-xs">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Max 10 events per day
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Input fields row */}
+              <div className="flex space-x-2">
+                <div className="w-1/2">
+                  <Input
+                    id="events-min"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={eventsPerDayRange.min}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (isNaN(value)) {
+                        setEventsPerDayRange(prev => ({ ...prev, min: 1 }));
+                      } else if (value < 1) {
+                        setEventsPerDayRange(prev => ({ ...prev, min: 1 }));
+                      } else if (value > 10) {
+                        setEventsPerDayRange(prev => ({ ...prev, min: 10 }));
+                      } else if (value > eventsPerDayRange.max) {
+                        // If min is greater than max, set min equal to max
+                        setEventsPerDayRange(prev => ({ ...prev, min: prev.max }));
+                      } else {
+                        setEventsPerDayRange(prev => ({ ...prev, min: value }));
+                      }
+                    }}
+                  />
+                </div>
+                <div className="w-1/2">
+                  <Input
+                    id="events-max"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={eventsPerDayRange.max}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (isNaN(value)) {
+                        setEventsPerDayRange(prev => ({ ...prev, max: 10 }));
+                      } else if (value < eventsPerDayRange.min) {
+                        // If max is less than min, set max equal to min
+                        setEventsPerDayRange(prev => ({ ...prev, max: prev.min }));
+                      } else if (value > 10) {
+                        setEventsPerDayRange(prev => ({ ...prev, max: 10 }));
+                      } else {
+                        setEventsPerDayRange(prev => ({ ...prev, max: value }));
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                The script will generate a random number of events between min and max for each day in the date range.
+              </p>
+            </div>
           </div>
-          
+          </div>
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="test-mode" 
