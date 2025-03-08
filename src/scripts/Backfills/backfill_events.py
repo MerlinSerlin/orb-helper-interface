@@ -15,7 +15,7 @@ parser.add_argument('--batch-size', type=int, default=400, help='Batch size for 
 parser.add_argument('--start-date', type=str, help='Start date in ISO format (YYYY-MM-DD)')
 parser.add_argument('--end-date', type=str, help='End date in ISO format (YYYY-MM-DD)')
 parser.add_argument('--event-type', type=str, help='Event type')
-parser.add_argument('--num-events', type=int, default=100, help='Number of events per day')
+parser.add_argument('--num-events', type=int, default=10, help='Number of events per day')
 parser.add_argument('--event-properties', type=str, default="{}", help='JSON string of additional event properties')
 parser.add_argument('--config-file', type=str, help='Path to JSON configuration file')
 parser.add_argument('--job-id', type=str, help='Job ID for tracking')
@@ -60,7 +60,12 @@ if args.config_file:
         start_date_str = config.get('start_date', '').split('T')[0]
         end_date_str = config.get('end_date', '').split('T')[0]
         
-        NUM_EVENTS = config.get('events_per_day', 100)
+        events_per_day_config = config.get('events_per_day', 10)
+        min_events = int(events_per_day_config.get('min', 1))
+        max_events = int(events_per_day_config.get('max', 10))
+        NUM_EVENTS_RANGE = (min_events, max_events)
+        print(f"Events Per Day: Random between {min_events} and {max_events}")
+
         EVENT_PROPERTIES = config.get('properties', {})
         
     except Exception as e:
@@ -72,7 +77,9 @@ else:
     EXTERNAL_CUSTOMER_ID = args.external_customer_id
     start_date_str = args.start_date.split('T')[0] if args.start_date else None
     end_date_str = args.end_date.split('T')[0] if args.end_date else None
-    NUM_EVENTS = args.num_events
+    # Convert the old num_events argument to a range
+    NUM_EVENTS_RANGE = (1, min(args.num_events, 10))
+    print(f"Command line mode: Using events range of 1-{min(args.num_events, 10)}")
     JOB_ID = args.job_id
     
     # Parse event properties from command line
@@ -181,22 +188,30 @@ def generate_property_value(prop_config):
             max_val = int(prop_config['max'])
             return random.randint(min_val, max_val)
         except (ValueError, TypeError):
-            print(f"Warning: Invalid range values: {prop_config}. Using default range 1-100.")
-            return random.randint(1, 100)
+            print(f"Warning: Invalid range values: {prop_config}. Using default range 1-10.")
+            return random.randint(1, 10)
     
     # Default fallback
     return str(prop_config)
 
 
-def generate_events_for_date_range(start_date, end_date, num_events=NUM_EVENTS):
-    """Generate events for each day in the date range"""
+def generate_events_for_date_range(start_date, end_date):
+    """Generate events for each day in the date range with random event counts"""
     events = []
+    min_events, max_events = NUM_EVENTS_RANGE
     
     # Iterate through each day in the range
     current_date = start_date
+    total_days = (end_date - start_date).days + 1
+    total_events_generated = 0
+    
     while current_date <= end_date:
+        # Determine how many events to generate for this day
+        daily_events = random.randint(min_events, max_events)
+        total_events_generated += daily_events
+        
         # For each day, generate the specified number of events
-        for _ in range(num_events):
+        for _ in range(daily_events):
             # Start with an empty properties dictionary
             properties = {}
             
@@ -215,6 +230,10 @@ def generate_events_for_date_range(start_date, end_date, num_events=NUM_EVENTS):
         
         # Move to the next day
         current_date += timedelta(days=1)
+    
+    # Print statistics about the events generated
+    print(f"Generated {total_events_generated} events over {total_days} days")
+    print(f"Average events per day: {total_events_generated / total_days:.2f}")
     
     return events
 
@@ -364,7 +383,7 @@ if __name__ == "__main__":
     print(f"Event Type: {EVENT_TYPE}")
     print(f"Customer ID: {EXTERNAL_CUSTOMER_ID}")
     print(f"Date Range: {start_date} to {end_date}")
-    print(f"Events Per Day: {NUM_EVENTS}")
+    print(f"Events Per Day: Random between {NUM_EVENTS_RANGE[0]} and {NUM_EVENTS_RANGE[1]}")
     print(f"Fixed Time: {FIXED_TIME}")
     
     # Print property configurations
@@ -386,9 +405,13 @@ if __name__ == "__main__":
     total_chunks = len(date_chunks)
     print(f"\nProcessing {total_chunks} date chunks (max {MAX_DAYS_PER_CHUNK} days per chunk)")
     
-    # Calculate total events
-    total_events = days_in_range * NUM_EVENTS
-    print(f"Total events to be generated: {total_events} ({days_in_range} days × {NUM_EVENTS} events/day)")
+    # Calculate estimated total events (using average of min and max)
+    min_events, max_events = NUM_EVENTS_RANGE
+    avg_events_per_day = (min_events + max_events) / 2
+    estimated_total_events = days_in_range * avg_events_per_day
+    print(f"Estimated total events: {estimated_total_events:.0f} ({days_in_range} days × {avg_events_per_day:.1f} avg events/day)")
+    print(f"Minimum possible events: {days_in_range * min_events}")
+    print(f"Maximum possible events: {days_in_range * max_events}")
     
     success = True
     events_processed = 0
@@ -438,7 +461,7 @@ if __name__ == "__main__":
         
         # Show progress
         progress_pct = (chunk_number / total_chunks) * 100
-        events_pct = (events_processed / total_events) * 100 if total_events > 0 else 0
+        events_pct = (events_processed / estimated_total_events) * 100 if estimated_total_events > 0 else 0
         elapsed = time.time() - start_time
         estimated_total = elapsed / progress_pct * 100 if progress_pct > 0 else 0
         remaining = max(0, estimated_total - elapsed)

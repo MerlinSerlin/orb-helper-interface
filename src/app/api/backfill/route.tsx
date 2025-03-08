@@ -112,8 +112,7 @@ export async function POST(request: Request) {
     console.log(`Config file created at: ${configFilePath}`)
 
     // Get script path from environment variables or use default
-    const scriptPath = process.env.PYTHON_BACKFILL_SCRIPT_PATH || 
-                       path.join(rootDir, 'src', 'scripts', 'Backfills', 'backfill_events.py')
+    const scriptPath = process.env.PYTHON_BACKFILL_SCRIPT_PATH || path.join(rootDir, 'src', 'scripts', 'Backfills', 'backfill_events.py')
     console.log(`Looking for script at: ${scriptPath}`)
     
     // Check if the script exists at the expected location
@@ -145,8 +144,6 @@ export async function POST(request: Request) {
       env: { 
         ...process.env,
         // Make sure the API token is available to the Python script
-        // Set both possible variable names to ensure compatibility
-        ORB_API_KEY: orbApiToken, 
         ORB_API_TOKEN: orbApiToken
       } 
     });
