@@ -1,12 +1,12 @@
 # Orb Helper Interface setup and quick tutorial
 
-## This is a web app that can do two things:
+### This is a web app that can do two things:
 
 1. Send events to Orb's ingestion API (event generator)
 
 2. Create a backfill and send events (backfill generator)
 
-# Setup
+## Setup
 
 Create a .env file in the root of the project.
 
@@ -16,9 +16,9 @@ Input your Orb API token value in an env variable called ORB_API_TOKEN
 
 Input your path value for the backfill script in an env variable called PYTHON_BACKFILL_SCRIPT_PATH (value might be something like: /{your_path}/orb-helper-interface/src/scripts/Backfills/backfill_events.py)
 
-# How To Use
+## How To Use
 
-## Run the web app
+### Run the web app
 
 First, run the development server:
 
@@ -34,17 +34,17 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Using the event generator
+### Using the event generator
 
 The web app allows you to submit an event or multiple events via the web UI. Events will have unique idempotency keys generated.
 
-### Randomizing values for multiple events.
+#### Randomizing values for multiple events.
 
 The web app allows you to create multiple events at a time. When defining event properties, you can click the 'Randomize values for lookalike' checkbox after entering a key value. 
 
 Example use: if your event key is fruit, you may want to generate values randomlly against a set of defined values (e.g. apple, banana). You can also select a range of integers (e.g. 1-100)
 
-## Using the backfill generator
+### Using the backfill generator
 
 **Backfill Generator is intended to be used locally!**
 
