@@ -2,9 +2,9 @@
 
 ## This is a web app that can do two things:
 
-### 1. Send events to Orb's ingestion API (event generator)
+1. Send events to Orb's ingestion API (event generator)
 
-### 2. Create a backfill and send events (backfill generator)
+2. Create a backfill and send events (backfill generator)
 
 # Setup
 
