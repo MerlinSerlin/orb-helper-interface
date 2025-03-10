@@ -18,8 +18,6 @@ Input your path value for the backfill script in an env variable called PYTHON_B
 
 ## How To Use
 
-### Run the web app
-
 First, run the development server:
 
 ```bash
