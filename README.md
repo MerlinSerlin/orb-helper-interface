@@ -6,7 +6,11 @@
 
 2. Create a backfill and send events (backfill generator)
 
-## Setup
+While this site has a live front-end deployed on Vercel (you can deploy your own site of course), I'd recommend running the backfill generator locally (since the Python script will execute locally).
+
+If you want to deploy your own site so you don't have to run the event generator locally every time, don't forget to set your environment variables on Vercel! https://vercel.com/docs/environment-variables  
+
+## Setup for running locally
 
 Create a .env file in the root of the project.
 
@@ -43,8 +47,6 @@ The web app allows you to create multiple events at a time. When defining event 
 Example use: if your event key is fruit, you may want to generate values randomlly against a set of defined values (e.g. apple, banana). You can also select a range of integers (e.g. 1-100)
 
 ### Using the backfill generator
-
-**Backfill Generator is intended to be used locally!**
 
 The backfill web app allows you to enter a range of dates for the backfill. The backfill will create "chunks" of events to respect Orb's 10 day backfill window. By default, you can't go more than 90 days in the past for start date, and no less than 2 days in the past for end date. This is to respect the 90 day soft limit Orb has for backfills, and also to ensure we don't send in events that have happened within the 12 hour grace period. 
 
