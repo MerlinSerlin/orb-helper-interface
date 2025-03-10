@@ -12,7 +12,7 @@ Create a .env file in the root of the project.
 
 Input your Orb API token value in an env variable called ORB_API_TOKEN
 
-### If you want to run a bacfkill
+### If you want to run a backfill
 
 Input your path value for the backfill script in an env variable called PYTHON_BACKFILL_SCRIPT_PATH (value might be something like: /{your_path}/orb-helper-interface/src/scripts/Backfills/backfill_events.py)
 
