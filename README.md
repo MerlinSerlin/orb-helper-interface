@@ -48,6 +48,10 @@ Example use: if your event key is fruit, you may want to generate values randoml
 
 ### Using the backfill generator
 
-The backfill web app allows you to enter a range of dates for the backfill. The backfill will create "chunks" of events to respect Orb's 10 day backfill window. By default, you can't go more than 90 days in the past for start date, and no less than 2 days in the past for end date. This is to respect the 90 day soft limit Orb has for backfills, and also to ensure we don't send in events that have happened within the 12 hour grace period. 
+The backfill web UI allows you to enter a range of dates for the backfill. You'll also be able to set property values and use the same randomization feature as the event generator.
+
+#### Under the hood:
+
+The backfill will create "chunks" of events to respect Orb's 10 day backfill window. By default, you can't go more than 90 days in the past for start date, and no less than 2 days in the past for end date. This is to respect the 90 day soft limit Orb has for backfills, and also to ensure we don't send in events that have happened within the 12 hour grace period. 
 
 When you click the Submit Backfill Job button, logging for that job should be printed in the terminal.
