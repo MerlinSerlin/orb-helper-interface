@@ -8,6 +8,7 @@ export type BackfillConfig = {
   properties: Record<string, BackfillPropertyValue>;
   backfill_customer_id: string | null;
   test_mode: boolean;
+  replace_existing_events: boolean;
 };
 
 // Create a specific type for the property values that can be passed to the Python script

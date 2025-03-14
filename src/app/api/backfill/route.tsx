@@ -19,7 +19,8 @@ export async function POST(request: Request) {
       events_per_day, 
       properties,
       backfill_customer_id,
-      test_mode = false // Add a test mode flag with default value of false
+      test_mode = false, // Add a test mode flag with default value of false
+      replace_existing_events = true // Add replace_existing_events with default value of true
     } = body
 
     // Log the received request
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       events_per_day,
       backfill_customer_id,
       test_mode,
+      replace_existing_events,
       properties_keys: properties ? Object.keys(properties) : []
     })
 
@@ -79,7 +81,8 @@ export async function POST(request: Request) {
       start_date: startDatePart, // Use just the date part
       end_date: endDatePart,     // Use just the date part
       events_per_day: events_per_day || 100,
-      properties
+      properties,
+      replace_existing_events // Include the replace_existing_events flag
     }
     
     // If in test mode, just return the validated config without running the script

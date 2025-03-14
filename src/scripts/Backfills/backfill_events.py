@@ -6,19 +6,22 @@ from orb import Orb
 import os
 import sys
 import uuid
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run backfill for Orb events')
-parser.add_argument('--external-customer-id', type=str, default="hover_demo_customer", help='External customer ID')
+parser.add_argument('--external-customer-id', type=str, default="acme", help='External customer ID')
 parser.add_argument('--batch-size', type=int, default=400, help='Batch size for processing')
 parser.add_argument('--start-date', type=str, help='Start date in ISO format (YYYY-MM-DD)')
 parser.add_argument('--end-date', type=str, help='End date in ISO format (YYYY-MM-DD)')
-parser.add_argument('--event-type', type=str, help='Event type')
+parser.add_argument('--event-name', type=str, help='Event name')
 parser.add_argument('--num-events', type=int, default=10, help='Number of events per day')
 parser.add_argument('--event-properties', type=str, default="{}", help='JSON string of additional event properties')
 parser.add_argument('--config-file', type=str, help='Path to JSON configuration file')
 parser.add_argument('--job-id', type=str, help='Job ID for tracking')
+parser.add_argument('--replace-existing-events', action='store_true', default=True, help='Replace existing events in timeframe')
+
+
 
 args = parser.parse_args()
 
@@ -46,15 +49,16 @@ if args.config_file:
             JOB_ID = config.get('jobId')
             
         # Extract values from config
-        EVENT_TYPE = config.get('event_name')
+        EVENT_NAME = config.get('event_name')
         EXTERNAL_CUSTOMER_ID = config.get('external_customer_id')
         BACKFILL_CUSTOMER_ID = config.get('backfill_customer_id')
+        REPLACE_EXISTING_EVENTS = config.get('replace_existing_events')
         
         # Use backfill_customer_id if provided, otherwise fall back to external_customer_id
         if BACKFILL_CUSTOMER_ID:
             EXTERNAL_CUSTOMER_ID = BACKFILL_CUSTOMER_ID
         elif not EXTERNAL_CUSTOMER_ID:
-            EXTERNAL_CUSTOMER_ID = 'hover_demo_customer'  # Default value
+            EXTERNAL_CUSTOMER_ID = 'acme'  # Default value
             
         # Extract just the date part (YYYY-MM-DD) from the date strings
         start_date_str = config.get('start_date', '').split('T')[0]
@@ -73,7 +77,7 @@ if args.config_file:
         sys.exit(1)
 else:
     # Use command line arguments if no config file
-    EVENT_TYPE = args.event_type
+    EVENT_NAME = args.event_type
     EXTERNAL_CUSTOMER_ID = args.external_customer_id
     start_date_str = args.start_date.split('T')[0] if args.start_date else None
     end_date_str = args.end_date.split('T')[0] if args.end_date else None
@@ -90,7 +94,7 @@ else:
         EVENT_PROPERTIES = {}
 
 # Validate required parameters
-if not EVENT_TYPE:
+if not EVENT_NAME:
     print("Error: event_type is required")
     sys.exit(1)
     
@@ -222,7 +226,7 @@ def generate_events_for_date_range(start_date, end_date):
             # Create the event with the fixed timestamp
             events.append({
                 "external_customer_id": EXTERNAL_CUSTOMER_ID,
-                "event_name": EVENT_TYPE,
+                "event_name": EVENT_NAME,
                 "timestamp": generate_timestamp(current_date),
                 "idempotency_key": generate_idempotency_key(),
                 "properties": properties,
@@ -268,7 +272,7 @@ def check_and_revert_pending_backfills():
         print("No pending backfills found.")
 
 
-def ingest_batch(events, chunk_start_date, chunk_end_date, batch_index, total_batches):
+def ingest_batch(events, chunk_start_date, chunk_end_date, chunk_number, total_chunks):
     """Ingest a batch of events within the specified timeframe"""
     if not events:
         print("No events to ingest for this timeframe")
@@ -293,7 +297,7 @@ def ingest_batch(events, chunk_start_date, chunk_end_date, batch_index, total_ba
             timeframe_start=timeframe_start_str,
             timeframe_end=timeframe_end_str,
             external_customer_id=EXTERNAL_CUSTOMER_ID,
-            replace_existing_events=True,
+            replace_existing_events=REPLACE_EXISTING_EVENTS,
         )
 
         print(f"Opened backfill {backfill.id}")
@@ -380,7 +384,7 @@ if __name__ == "__main__":
     print(f"STARTING BACKFILL JOB: {JOB_ID}")
     print(f"{'='*80}\n")
     
-    print(f"Event Type: {EVENT_TYPE}")
+    print(f"Event Name: {EVENT_NAME}")
     print(f"Customer ID: {EXTERNAL_CUSTOMER_ID}")
     print(f"Date Range: {start_date} to {end_date}")
     print(f"Events Per Day: Random between {NUM_EVENTS_RANGE[0]} and {NUM_EVENTS_RANGE[1]}")
