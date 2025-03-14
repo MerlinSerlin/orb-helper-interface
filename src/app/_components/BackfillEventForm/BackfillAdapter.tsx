@@ -47,7 +47,8 @@ export function BackfillAdapter() {
   const [success, setSuccess] = useState<string | null>(null)
   const [externalCustomerId, setExternalCustomerId] = useState('')
   const [testMode, setTestMode] = useState(false)
-  const [testResponse, setTestResponse] = useState<TestResponseType | null>(null);
+  const [testResponse, setTestResponse] = useState<TestResponseType | null>(null)
+  const [replaceExistingEvents, setReplaceExistingEvents] = useState(true)
   
   // Get the minimum and maximum allowed dates
   const minDate = getMinimumBackfillDate() as string
@@ -213,7 +214,8 @@ export function BackfillAdapter() {
         events_per_day: { type: 'range', min: eventsPerDayRange.min, max: eventsPerDayRange.max },
         properties: eventProperties,
         backfill_customer_id: externalCustomerId || null,
-        test_mode: testMode // Add test mode flag
+        test_mode: testMode, // Add test mode flag
+        replace_existing_events: replaceExistingEvents // Add the replace existing events flag
       };
 
       // Send to API route
@@ -441,6 +443,23 @@ export function BackfillAdapter() {
             </div>
           </div>
           </div>
+          
+          {/* Replace Existing Events Checkbox */}
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="replace-existing-events" 
+              checked={replaceExistingEvents} 
+              onCheckedChange={(checked) => setReplaceExistingEvents(checked === true)}
+            />
+            <Label htmlFor="replace-existing-events" className="text-sm font-medium">
+              Replace Existing Events
+            </Label>
+            <span className="text-sm text-muted-foreground">
+              (If unchecked, events will be added without replacing existing ones in the date range)
+            </span>
+          </div>
+          
+          {/* Test Mode Checkbox */}
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="test-mode" 
