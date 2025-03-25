@@ -7,8 +7,8 @@ import { useEventStore } from './store'
 import { generateLookalikeEvents } from '@/lib/utils'
 
 export const useEventSubmission = () => {
-  const { events, generatedEventCount, reset } = useEventStore()
-
+  const { events, generatedEventCount, markEventsAsSubmitted } = useEventStore()
+  
   return useMutation({
     mutationFn: async () => {
       const lastEvent = events[events.length - 1]
@@ -30,7 +30,7 @@ export const useEventSubmission = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        reset()
+        markEventsAsSubmitted()
       }
     }
   })

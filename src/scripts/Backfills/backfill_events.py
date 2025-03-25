@@ -339,7 +339,7 @@ def ingest_batch(events, chunk_start_date, chunk_end_date, chunk_number, total_c
 
         # Wait until backfill is reflected
         print("Waiting for backfill to be reflected...")
-        max_attempts = 30  # Prevent infinite loop
+        max_attempts = 60  # Prevent infinite loop # 5 minutes
         attempts = 0
         last_logged_status = None
         

@@ -35,6 +35,7 @@ interface EventActions {
   setIsSubmitting: (isSubmitting: boolean) => void
   setError: (error: string | null) => void
   reset: () => void
+  markEventsAsSubmitted: () => void
 }
 
 type EventStore = EventState & EventActions
@@ -45,6 +46,7 @@ const createInitialEvent = (): Event => ({
   properties: [],
   idempotency_key: uuidv4(),
   external_customer_id: "",
+  submitted: false,
 })
 
 export const useEventStore = create<EventStore>((set) => ({
@@ -157,7 +159,12 @@ export const useEventStore = create<EventStore>((set) => ({
     generatedEventCount: 0,
     isSubmitting: false,
     error: null
-  })
+  }),
+
+  markEventsAsSubmitted: () => 
+  set(state => ({
+    events: state.events.map(event => ({ ...event, submitted: true }))
+  })),
 }))
 
 // Selectors for performance optimization
