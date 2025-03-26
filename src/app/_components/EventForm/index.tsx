@@ -148,32 +148,34 @@ export function EventForm() {
                               />
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center space-x-2">
-                                  <input
-                                  type="checkbox"
-                                  checked={prop.isLookalike}
-                                  disabled={!prop.key}
-                                  onChange={(e) => {
-                                      const isChecked = e.target.checked;
-                                      if (isChecked) {
-                                      // When checking the box, initialize with a default type and empty values
-                                      updateProperty(eventIndex, propIndex, "isLookalike", true);
-                                      updateProperty(eventIndex, propIndex, "lookalikeType", "set");
-                                      updateProperty(eventIndex, propIndex, "lookalikeValues", []);
-                                      } else {
-                                      // When unchecking, clear all lookalike-related fields
-                                      updateProperty(eventIndex, propIndex, "isLookalike", false);
-                                      updateProperty(eventIndex, propIndex, "lookalikeType", undefined);
-                                      updateProperty(eventIndex, propIndex, "lookalikeValues", undefined);
-                                      updateProperty(eventIndex, propIndex, "lookalikeRange", undefined);
-                                      }
-                                  }}
-                                  className="h-4 w-4 rounded border-gray-300"
-                                  />
-                                <Label className={!prop.key ? 'text-muted-foreground/50' : ''}>
-                                  Randomize values for lookalike
-                                </Label>
-                              </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`lookalike-checkbox-${eventIndex}-${propIndex}`}
+                                checked={prop.isLookalike}
+                                disabled={!prop.key}
+                                className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    // When checking the box, initialize with a default type and empty values
+                                    updateProperty(eventIndex, propIndex, "isLookalike", true);
+                                    updateProperty(eventIndex, propIndex, "lookalikeType", "set");
+                                    updateProperty(eventIndex, propIndex, "lookalikeValues", []);
+                                  } else {
+                                    // When unchecking, clear all lookalike-related fields
+                                    updateProperty(eventIndex, propIndex, "isLookalike", false);
+                                    updateProperty(eventIndex, propIndex, "lookalikeType", undefined);
+                                    updateProperty(eventIndex, propIndex, "lookalikeValues", undefined);
+                                    updateProperty(eventIndex, propIndex, "lookalikeRange", undefined);
+                                  }
+                                }}
+                              />
+                              <Label 
+                                htmlFor={`lookalike-checkbox-${eventIndex}-${propIndex}`}
+                                className={!prop.key ? 'text-muted-foreground/50' : ''}
+                              >
+                                Randomize values for lookalike
+                              </Label>
+                            </div>
                             </TableCell>
                             <TableCell>
                               <Button
@@ -300,6 +302,7 @@ export function EventForm() {
               <Checkbox
                 id="preserve-data"
                 checked={preserveFormData}
+                className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                 onCheckedChange={(checked) => setPreserveFormData(checked === true)}
               />
               <Label htmlFor="preserve-data" className="text-sm">
