@@ -19,6 +19,10 @@ export type LookalikeRange = {
     properties: Property[];
     idempotency_key: string;
     external_customer_id: string;
+    submitted?: boolean;
+    animatingSubmission?: boolean;
+    lastSubmittedAt?: string;
+    lastSubmittedIdempotencyKey?: string;
   };
 
   export interface EventSubmissionResponse {

@@ -15,7 +15,7 @@ interface EventState {
 interface EventActions {
   // Event actions
   addEvent: () => void
-  updateEvent: (index: number, field: keyof Omit<Event, "properties">, value: string) => void
+  updateEvent: (index: number, field: keyof Omit<Event, "properties">, value: string | boolean) => void
   removeEvent: (index: number) => void
   
   // Property actions
@@ -27,7 +27,11 @@ interface EventActions {
     value: string | boolean | string[] | LookalikeRange | undefined
   ) => void
   removeProperty: (eventIndex: number, propertyIndex: number) => void
-  
+  updateEventField: <K extends 'event_name' | 'timestamp' | 'external_customer_id' | 'animatingSubmission'>(
+    eventIndex: number, 
+    fieldName: K, 
+    value: K extends 'animatingSubmission' ? boolean : string
+  ) => void;  
   // Lookalike events
   setGeneratedEventCount: (count: number) => void
   
@@ -35,6 +39,8 @@ interface EventActions {
   setIsSubmitting: (isSubmitting: boolean) => void
   setError: (error: string | null) => void
   reset: () => void
+  markEventsAsSubmitted: () => void
+  regenerateIdempotencyKeys: () => void
 }
 
 type EventStore = EventState & EventActions
@@ -45,6 +51,7 @@ const createInitialEvent = (): Event => ({
   properties: [],
   idempotency_key: uuidv4(),
   external_customer_id: "",
+  submitted: false,
 })
 
 export const useEventStore = create<EventStore>((set) => ({
@@ -53,17 +60,23 @@ export const useEventStore = create<EventStore>((set) => ({
   generatedEventCount: 0,
   isSubmitting: false,
   error: null,
+  
 
   // Event actions
   addEvent: () => set((state) => ({
     events: [...state.events, createInitialEvent()]
   })),
 
-  updateEvent: (index, field, value) => set((state) => ({
-    events: state.events.map((event, i) =>
-      i === index ? { ...event, [field]: value } : event
-    )
-  })),
+  updateEvent: <K extends keyof Event>(
+    index: number, 
+    field: K, 
+    value: Event[K]
+  ) => 
+    set((state) => ({
+      events: state.events.map((event, i) => 
+        i === index ? { ...event, [field]: value } : event
+      )
+    })),
 
   removeEvent: (index) => set((state) => ({
     events: state.events.filter((_, i) => i !== index)
@@ -138,6 +151,17 @@ export const useEventStore = create<EventStore>((set) => ({
     )
   })),
 
+  updateEventField: <K extends "event_name" | "timestamp" | "external_customer_id" | "animatingSubmission">(
+    eventIndex: number, 
+    fieldName: K, 
+    value: K extends "animatingSubmission" ? boolean : string
+  ) => 
+    set((state) => ({
+      events: state.events.map((event, i) => 
+        i === eventIndex ? { ...event, [fieldName]: value } : event
+      )
+    })),
+
   // Lookalike events
   setGeneratedEventCount: (count) => set({
     generatedEventCount: count
@@ -157,7 +181,23 @@ export const useEventStore = create<EventStore>((set) => ({
     generatedEventCount: 0,
     isSubmitting: false,
     error: null
-  })
+  }),
+
+  markEventsAsSubmitted: () => 
+    set(state => ({
+      events: state.events.map(event => ({ 
+        ...event, 
+        animatingSubmission: true,
+        lastSubmittedAt: new Date().toISOString()
+      }))
+    })),
+
+  regenerateIdempotencyKeys: () => set((state) => ({
+    events: state.events.map(event => ({
+      ...event,
+      idempotency_key: uuidv4(), // Generate a new UUID
+    }))
+  })),
 }))
 
 // Selectors for performance optimization

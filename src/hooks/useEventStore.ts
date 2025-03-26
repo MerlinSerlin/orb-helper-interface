@@ -16,9 +16,16 @@ interface EventStore {
     field: keyof Property,
     value: string | boolean | string[] | LookalikeRange | undefined
   ) => void
+  updateEventField: <K extends keyof Omit<Event, "properties" | "idempotency_key">>(
+    eventIndex: number, 
+    fieldName: K, 
+    value: Event[K]
+  ) => void;
   removeProperty: (eventIndex: number, propertyIndex: number) => void
   setGeneratedEventCount: (count: number) => void
   reset: () => void
+  regenerateIdempotencyKeys: () => void
+  
 }
 
 const initialEvent = (): Event => ({
@@ -85,8 +92,37 @@ export const useEventStore = create<EventStore>((set) => ({
         : event
     )
   })),
+
+  // In the store implementation
+updateEventField: <K extends keyof Omit<Event, "properties" | "idempotency_key">>(
+  eventIndex: number, 
+  fieldName: K, 
+  value: Event[K]
+) => 
+  set((state) => ({
+    events: state.events.map((event, i) => 
+      i === eventIndex ? { ...event, [fieldName]: value } : event
+    )
+  })),
+
   
   setGeneratedEventCount: (count) => set({ generatedEventCount: count }),
   
-  reset: () => set({ events: [initialEvent()], generatedEventCount: 0 })
+  reset: () => set({ events: [initialEvent()], generatedEventCount: 0 }),
+
+  markEventsAsSubmitted: () => 
+    set(state => ({
+      events: state.events.map(event => ({ 
+        ...event, 
+        animatingSubmission: true,
+        lastSubmittedAt: new Date().toISOString(),
+        lastSubmittedIdempotencyKey: event.idempotency_key
+      }))
+    })),
+  regenerateIdempotencyKeys: () => set((state) => ({
+    events: state.events.map(event => ({
+      ...event,
+      idempotency_key: uuidv4(),
+    }))
+  })),
 }))
