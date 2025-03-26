@@ -69,4 +69,28 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  
+  .submission-indicator {
+    animation: fadeIn 0.3s ease-in-out, fadeOut 0.5s ease-in-out 1.5s forwards;
+  }
+  
+  @keyframes flash {
+    0% { background-color: rgba(34, 197, 94, 0.1); }
+    50% { background-color: rgba(34, 197, 94, 0.2); }
+    100% { background-color: transparent; }
+  }
+  
+  .animate-flash {
+    animation: flash 2s ease-out forwards;
+  }
 }

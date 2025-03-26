@@ -19,6 +19,8 @@ interface EventStore {
   removeProperty: (eventIndex: number, propertyIndex: number) => void
   setGeneratedEventCount: (count: number) => void
   reset: () => void
+  regenerateIdempotencyKeys: () => void
+  
 }
 
 const initialEvent = (): Event => ({
@@ -88,5 +90,21 @@ export const useEventStore = create<EventStore>((set) => ({
   
   setGeneratedEventCount: (count) => set({ generatedEventCount: count }),
   
-  reset: () => set({ events: [initialEvent()], generatedEventCount: 0 })
+  reset: () => set({ events: [initialEvent()], generatedEventCount: 0 }),
+
+  markEventsAsSubmitted: () => 
+    set(state => ({
+      events: state.events.map(event => ({ 
+        ...event, 
+        animatingSubmission: true,
+        lastSubmittedAt: new Date().toISOString(),
+        lastSubmittedIdempotencyKey: event.idempotency_key
+      }))
+    })),
+  regenerateIdempotencyKeys: () => set((state) => ({
+    events: state.events.map(event => ({
+      ...event,
+      idempotency_key: uuidv4(),
+    }))
+  })),
 }))

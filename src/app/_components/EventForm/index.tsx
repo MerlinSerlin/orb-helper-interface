@@ -1,7 +1,7 @@
 // app/_components/EventForm/index.tsx
 'use client'
 
-import { Fragment } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { useEventStore } from './store'
 import { useEventSubmission } from './useEventSubmission'
 import { Button } from '@/components/ui/button'
@@ -12,8 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Checkbox } from '@/components/ui/checkbox'
 
 export function EventForm() {
+  const [preserveFormData, setPreserveFormData] = useState(false);  
+
   const {
     events,
     addEvent,
@@ -26,7 +29,7 @@ export function EventForm() {
     setGeneratedEventCount,
   } = useEventStore()
 
-  const { mutate: submitEvents, isPending, error, data } = useEventSubmission()
+  const { mutate: submitEvents, isPending, error, data } = useEventSubmission(preserveFormData)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,12 +47,30 @@ export function EventForm() {
     submitEvents()
   }
 
+  useEffect(() => {
+    // Check each event for animatingSubmission flag
+    events.forEach((event, index) => {
+      if (event.animatingSubmission) {
+        const timer = setTimeout(() => {
+          // Clear the animation state after 2 seconds
+          updateEvent(index, 'animatingSubmission', false);
+        }, 2000);
+        
+        // Store the timer ID for cleanup
+        return () => clearTimeout(timer);
+      }
+    });
+  }, [events, updateEvent]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto">
         {events.map((event, eventIndex) => (
           <div key={event.idempotency_key} className="relative">
-            <Card className={`${event.submitted ? 'border-green-500 border-2 rounded-xl border bg-card' : ""}`}>
+            <Card className={`
+              ${event.submitted ? 'border-green-500 border-2 rounded-xl border bg-card' : ""}
+              ${event.animatingSubmission ? 'animate-flash' : ''}
+            `}>
               <CardHeader>
                 <CardTitle>Model Your Event</CardTitle>
               </CardHeader>
@@ -260,22 +281,35 @@ export function EventForm() {
                 )}
               </CardContent>
             </Card>
-          {event.submitted && (
-          <div className="absolute top-2 right-2">
-            <Badge variant="success">Submitted</Badge>
+            {(event.submitted || event.animatingSubmission) && (
+              <div className={`absolute top-2 right-2 ${event.animatingSubmission ? 'submission-indicator' : ''}`}>
+                <Badge variant="success">
+                  {event.animatingSubmission ? 'Just Submitted' : 'Submitted'}
+                </Badge>
+              </div>
+            )}
           </div>
-          )}
-    </div>
-          
         ))}
 
         <div className="flex justify-between items-center">
           <Button type="button" onClick={addEvent}>
             Add Another Event
           </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Submitting..." : "Submit"}
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="preserve-data"
+                checked={preserveFormData}
+                onCheckedChange={(checked) => setPreserveFormData(checked === true)}
+              />
+              <Label htmlFor="preserve-data" className="text-sm">
+                Preserve form data after submission
+              </Label>
+            </div>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Submitting..." : "Submit"}
+            </Button>
+          </div>
         </div>
 
         <Card className="w-full mt-8">
