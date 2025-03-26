@@ -87,6 +87,14 @@ export const useEventStore = create<EventStore>((set) => ({
         : event
     )
   })),
+
+  updateEventField: (eventIndex: number, fieldName: 'event_name' | 'timestamp' | 'external_customer_id' | 'animatingSubmission', value: any) => 
+    set((state) => ({
+      events: state.events.map((event, i) => 
+        i === eventIndex ? { ...event, [fieldName]: value } : event
+      )
+    })),
+
   
   setGeneratedEventCount: (count) => set({ generatedEventCount: count }),
   
