@@ -27,8 +27,11 @@ interface EventActions {
     value: string | boolean | string[] | LookalikeRange | undefined
   ) => void
   removeProperty: (eventIndex: number, propertyIndex: number) => void
-  updateEventField: (eventIndex: number, fieldName: 'event_name' | 'timestamp' | 'external_customer_id' | 'animatingSubmission', value: any) => void;
-  
+  updateEventField: <K extends 'event_name' | 'timestamp' | 'external_customer_id' | 'animatingSubmission'>(
+    eventIndex: number, 
+    fieldName: K, 
+    value: K extends 'animatingSubmission' ? boolean : string
+  ) => void;  
   // Lookalike events
   setGeneratedEventCount: (count: number) => void
   
@@ -148,7 +151,11 @@ export const useEventStore = create<EventStore>((set) => ({
     )
   })),
 
-  updateEventField: (eventIndex: number, fieldName: 'event_name' | 'timestamp' | 'external_customer_id' | 'animatingSubmission', value: any) => 
+  updateEventField: <K extends "event_name" | "timestamp" | "external_customer_id" | "animatingSubmission">(
+    eventIndex: number, 
+    fieldName: K, 
+    value: K extends "animatingSubmission" ? boolean : string
+  ) => 
     set((state) => ({
       events: state.events.map((event, i) => 
         i === eventIndex ? { ...event, [fieldName]: value } : event

@@ -16,6 +16,11 @@ interface EventStore {
     field: keyof Property,
     value: string | boolean | string[] | LookalikeRange | undefined
   ) => void
+  updateEventField: <K extends keyof Omit<Event, "properties" | "idempotency_key">>(
+    eventIndex: number, 
+    fieldName: K, 
+    value: Event[K]
+  ) => void;
   removeProperty: (eventIndex: number, propertyIndex: number) => void
   setGeneratedEventCount: (count: number) => void
   reset: () => void
@@ -88,12 +93,17 @@ export const useEventStore = create<EventStore>((set) => ({
     )
   })),
 
-  updateEventField: (eventIndex: number, fieldName: 'event_name' | 'timestamp' | 'external_customer_id' | 'animatingSubmission', value: any) => 
-    set((state) => ({
-      events: state.events.map((event, i) => 
-        i === eventIndex ? { ...event, [fieldName]: value } : event
-      )
-    })),
+  // In the store implementation
+updateEventField: <K extends keyof Omit<Event, "properties" | "idempotency_key">>(
+  eventIndex: number, 
+  fieldName: K, 
+  value: Event[K]
+) => 
+  set((state) => ({
+    events: state.events.map((event, i) => 
+      i === eventIndex ? { ...event, [fieldName]: value } : event
+    )
+  })),
 
   
   setGeneratedEventCount: (count) => set({ generatedEventCount: count }),
