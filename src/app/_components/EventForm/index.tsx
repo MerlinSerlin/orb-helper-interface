@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
+import { v4 as uuidv4 } from 'uuid'
 
 export function EventForm() {
   const [preserveFormData, setPreserveFormData] = useState(false);  
@@ -142,9 +143,15 @@ export function EventForm() {
                             </TableCell>
                             <TableCell>
                               <Input
-                                placeholder="Value"
+                                placeholder={
+                                  prop.useUUID ? "UUID will be generated" :
+                                  prop.isLookalike && prop.lookalikeType === "set" ? "Set of Values" :
+                                  prop.isLookalike && prop.lookalikeType === "range" ? "Range of Integers" :
+                                  "Value"
+                                }
                                 value={prop.value}
                                 onChange={(e) => updateProperty(eventIndex, propIndex, "value", e.target.value)}
+                                disabled={prop.isLookalike || prop.useUUID}
                               />
                             </TableCell>
                             <TableCell>
@@ -160,6 +167,12 @@ export function EventForm() {
                                     updateProperty(eventIndex, propIndex, "isLookalike", true);
                                     updateProperty(eventIndex, propIndex, "lookalikeType", "set");
                                     updateProperty(eventIndex, propIndex, "lookalikeValues", []);
+                                    // Clear the current value to show placeholder instead
+                                    updateProperty(eventIndex, propIndex, "value", "");
+                                    // If UUID was checked, uncheck it and clear the value
+                                    if (prop.useUUID) {
+                                      updateProperty(eventIndex, propIndex, "useUUID", false);
+                                    }
                                   } else {
                                     // When unchecking, clear all lookalike-related fields
                                     updateProperty(eventIndex, propIndex, "isLookalike", false);
@@ -174,6 +187,38 @@ export function EventForm() {
                                 className={!prop.key ? 'text-muted-foreground/50' : ''}
                               >
                                 Randomize values for lookalike
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Checkbox
+                                id={`uuid-checkbox-${eventIndex}-${propIndex}`}
+                                checked={!!prop.useUUID}
+                                disabled={!prop.key}
+                                className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    // When checking the box, generate a UUID and update the property
+                                    updateProperty(eventIndex, propIndex, "useUUID", true);
+                                    updateProperty(eventIndex, propIndex, "value", uuidv4());
+                                    // If randomize values was checked, uncheck it
+                                    if (prop.isLookalike) {
+                                      updateProperty(eventIndex, propIndex, "isLookalike", false);
+                                      updateProperty(eventIndex, propIndex, "lookalikeType", undefined);
+                                      updateProperty(eventIndex, propIndex, "lookalikeValues", undefined);
+                                      updateProperty(eventIndex, propIndex, "lookalikeRange", undefined);
+                                    }
+                                  } else {
+                                    // When unchecking, clear the UUID-related field
+                                    updateProperty(eventIndex, propIndex, "useUUID", false);
+                                    updateProperty(eventIndex, propIndex, "value", "");
+                                  }
+                                }}
+                              />
+                              <Label 
+                                htmlFor={`uuid-checkbox-${eventIndex}-${propIndex}`}
+                                className={!prop.key ? 'text-muted-foreground/50' : ''}
+                              >
+                                Generate UUID
                               </Label>
                             </div>
                             </TableCell>
@@ -194,9 +239,23 @@ export function EventForm() {
                                 <div className="space-y-2">
                                   <Select
                                       value={prop.lookalikeType || "set"}
-                                      onValueChange={(value) => 
-                                          updateProperty(eventIndex, propIndex, "lookalikeType", value as "set" | "range")
-                                      }
+                                      onValueChange={(value) => {
+                                          const previousType = prop.lookalikeType;
+                                          updateProperty(eventIndex, propIndex, "lookalikeType", value as "set" | "range");
+                                          
+                                          // Clear values when switching between types
+                                          if (value === "set" && previousType === "range") {
+                                              // Clear range values when switching to set
+                                              updateProperty(eventIndex, propIndex, "lookalikeRange", undefined);
+                                              updateProperty(eventIndex, propIndex, "lookalikeValues", []);
+                                              updateProperty(eventIndex, propIndex, "value", ""); // Clear the visible value
+                                          } else if (value === "range" && previousType === "set") {
+                                              // Clear set values when switching to range
+                                              updateProperty(eventIndex, propIndex, "lookalikeValues", undefined);
+                                              updateProperty(eventIndex, propIndex, "lookalikeRange", { min: 0, max: 10 });
+                                              updateProperty(eventIndex, propIndex, "value", ""); // Clear the visible value
+                                          }
+                                      }}
                                       >
                                       <SelectTrigger>
                                           <SelectValue placeholder="Select lookalike type" />

@@ -21,13 +21,14 @@ parser.add_argument('--config-file', type=str, help='Path to JSON configuration 
 parser.add_argument('--job-id', type=str, help='Job ID for tracking')
 parser.add_argument('--replace-existing-events', action='store_true', default=True, help='Replace existing events in timeframe')
 
-
-
 args = parser.parse_args()
 
 BATCH_SIZE = args.batch_size
 MAX_DAYS_PER_CHUNK = 10  # Maximum days per chunk
 FIXED_TIME = "12:00:00"  # Use noon for all events
+
+# Initialize EVENT_PROPERTIES to ensure it's defined
+EVENT_PROPERTIES = {}
 
 # If a config file is provided, load configuration from it
 if args.config_file:
@@ -36,39 +37,38 @@ if args.config_file:
         with open(args.config_file, 'r') as f:
             file_config = json.load(f)
             
-        # For debugging: print the raw configuration structure
-        print(f"Raw config structure: {json.dumps(file_config, indent=2)}")
-            
-        # The config structure may vary - handle both direct and nested formats
         if 'config' in file_config:
             config = file_config['config']
-            # If jobId is at the root level, grab it
             JOB_ID = file_config.get('jobId') or config.get('jobId')
         else:
             config = file_config
             JOB_ID = config.get('jobId')
             
-        # Extract values from config
         EVENT_NAME = config.get('event_name')
         EXTERNAL_CUSTOMER_ID = config.get('external_customer_id')
         BACKFILL_CUSTOMER_ID = config.get('backfill_customer_id')
         REPLACE_EXISTING_EVENTS = config.get('replace_existing_events')
         
-        # Use backfill_customer_id if provided, otherwise fall back to external_customer_id
         if BACKFILL_CUSTOMER_ID:
             EXTERNAL_CUSTOMER_ID = BACKFILL_CUSTOMER_ID
         elif not EXTERNAL_CUSTOMER_ID:
-            EXTERNAL_CUSTOMER_ID = 'acme'  # Default value
+            EXTERNAL_CUSTOMER_ID = 'acme'
             
-        # Extract just the date part (YYYY-MM-DD) from the date strings
         start_date_str = config.get('start_date', '').split('T')[0]
         end_date_str = config.get('end_date', '').split('T')[0]
         
         events_per_day_config = config.get('events_per_day', 10)
-        min_events = int(events_per_day_config.get('min', 1))
-        max_events = int(events_per_day_config.get('max', 10))
+        if isinstance(events_per_day_config, dict):
+            min_events = int(events_per_day_config.get('min', 1))
+            max_events = int(events_per_day_config.get('max', 10))
+        elif isinstance(events_per_day_config, (int, str)):
+            num = int(events_per_day_config)
+            min_events = max(1, num - 2)
+            max_events = num + 2
+        else:
+            min_events = 1
+            max_events = 10
         NUM_EVENTS_RANGE = (min_events, max_events)
-        print(f"Events Per Day: Random between {min_events} and {max_events}")
 
         EVENT_PROPERTIES = config.get('properties', {})
         
@@ -77,20 +77,18 @@ if args.config_file:
         sys.exit(1)
 else:
     # Use command line arguments if no config file
-    EVENT_NAME = args.event_type
+    EVENT_NAME = args.event_name
     EXTERNAL_CUSTOMER_ID = args.external_customer_id
     start_date_str = args.start_date.split('T')[0] if args.start_date else None
     end_date_str = args.end_date.split('T')[0] if args.end_date else None
-    # Convert the old num_events argument to a range
     NUM_EVENTS_RANGE = (1, min(args.num_events, 10))
-    print(f"Command line mode: Using events range of 1-{min(args.num_events, 10)}")
     JOB_ID = args.job_id
+    REPLACE_EXISTING_EVENTS = args.replace_existing_events
     
-    # Parse event properties from command line
     try:
         EVENT_PROPERTIES = json.loads(args.event_properties)
     except Exception as e:
-        print(f"Error parsing event properties: {e}")
+        print(f"Error parsing event properties from command line: {e}")
         EVENT_PROPERTIES = {}
 
 # Validate required parameters
@@ -176,26 +174,33 @@ def get_date_chunks(start_date, end_date, max_days=MAX_DAYS_PER_CHUNK):
 
 
 def generate_property_value(prop_config):
-    """Generate a value for a property based on its configuration"""
-    # If the property is a simple string/value, return it as is
+    """Generate a value for a property based on its configuration."""
     if not isinstance(prop_config, dict):
         return prop_config
-        
-    # Handle randomized properties
-    if prop_config.get('type') == 'set' and 'values' in prop_config:
-        # Random choice from a set of values
-        return random.choice(prop_config['values'])
-    elif prop_config.get('type') == 'range' and 'min' in prop_config and 'max' in prop_config:
-        # Random integer in a range
+
+    if prop_config.get('useUUID') is True:
+        return str(uuid.uuid4())
+
+    prop_type = prop_config.get('type')
+    if prop_type == 'set' and 'values' in prop_config:
+        values_list = prop_config['values']
+        if isinstance(values_list, list) and values_list:
+            return random.choice(values_list)
+        else:
+            return "" 
+    elif prop_type == 'range' and 'min' in prop_config and 'max' in prop_config:
         try:
             min_val = int(prop_config['min'])
             max_val = int(prop_config['max'])
+            if min_val > max_val:
+                return min_val
             return random.randint(min_val, max_val)
         except (ValueError, TypeError):
-            print(f"Warning: Invalid range values: {prop_config}. Using default range 1-10.")
             return random.randint(1, 10)
+
+    if 'value' in prop_config:
+        return prop_config['value']
     
-    # Default fallback
     return str(prop_config)
 
 
@@ -204,26 +209,19 @@ def generate_events_for_date_range(start_date, end_date):
     events = []
     min_events, max_events = NUM_EVENTS_RANGE
     
-    # Iterate through each day in the range
     current_date = start_date
     total_days = (end_date - start_date).days + 1
     total_events_generated = 0
-    
+
     while current_date <= end_date:
-        # Determine how many events to generate for this day
         daily_events = random.randint(min_events, max_events)
         total_events_generated += daily_events
         
-        # For each day, generate the specified number of events
         for _ in range(daily_events):
-            # Start with an empty properties dictionary
             properties = {}
+            for key, config_value in EVENT_PROPERTIES.items():
+                properties[key] = generate_property_value(config_value)
             
-            # Process each configured property
-            for key, config in EVENT_PROPERTIES.items():
-                properties[key] = generate_property_value(config)
-            
-            # Create the event with the fixed timestamp
             events.append({
                 "external_customer_id": EXTERNAL_CUSTOMER_ID,
                 "event_name": EVENT_NAME,
@@ -232,10 +230,8 @@ def generate_events_for_date_range(start_date, end_date):
                 "properties": properties,
             })
         
-        # Move to the next day
         current_date += timedelta(days=1)
     
-    # Print statistics about the events generated
     print(f"Generated {total_events_generated} events over {total_days} days")
     print(f"Average events per day: {total_events_generated / total_days:.2f}")
     

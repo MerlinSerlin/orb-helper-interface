@@ -35,6 +35,15 @@ export const generateLookalikeEvents = (templateEvent: CustomEvent, count: numbe
           }
         }
       }
+      
+      // Handle UUID properties
+      if (prop.useUUID) {
+        return {
+          ...prop,
+          value: uuidv4(),
+        }
+      }
+      
       return prop
     }),
   }))
