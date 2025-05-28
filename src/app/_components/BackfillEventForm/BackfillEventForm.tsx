@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertCircle } from 'lucide-react'
+import { v4 as uuidv4 } from 'uuid'
 
 interface BackfillEventFormProps {
   backfillCustomerId?: string;
@@ -111,10 +112,15 @@ export function BackfillEventForm({ backfillCustomerId = '' }: BackfillEventForm
                     </TableCell>
                     <TableCell>
                       <Input
-                        placeholder="Value"
+                        placeholder={
+                          prop.useUUID ? "UUID will be generated" :
+                          prop.isLookalike && prop.lookalikeType === "set" ? "Set of Values" :
+                          prop.isLookalike && prop.lookalikeType === "range" ? "Range of Integers" :
+                          "Value"
+                        }
                         value={prop.value}
                         onChange={(e) => updateProperty(propIndex, "value", e.target.value)}
-                        disabled={prop.isLookalike}
+                        disabled={prop.isLookalike || prop.useUUID}
                       />
                     </TableCell>
                     <TableCell>
@@ -130,6 +136,12 @@ export function BackfillEventForm({ backfillCustomerId = '' }: BackfillEventForm
                               updateProperty(propIndex, "isLookalike", true);
                               updateProperty(propIndex, "lookalikeType", "set");
                               updateProperty(propIndex, "lookalikeValues", []);
+                              // Clear the current value to show placeholder instead
+                              updateProperty(propIndex, "value", "");
+                              // If UUID was checked, uncheck it and clear the value
+                              if (prop.useUUID) {
+                                updateProperty(propIndex, "useUUID", false);
+                              }
                             } else {
                               // When unchecking, clear all lookalike-related fields
                               updateProperty(propIndex, "isLookalike", false);
@@ -142,6 +154,36 @@ export function BackfillEventForm({ backfillCustomerId = '' }: BackfillEventForm
                         />
                         <Label className={!prop.key ? 'text-muted-foreground/50' : ''}>
                           Randomize values
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <input
+                          type="checkbox"
+                          checked={!!prop.useUUID}
+                          disabled={!prop.key}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            if (isChecked) {
+                              // When checking the box, generate a UUID and update the property
+                              updateProperty(propIndex, "useUUID", true);
+                              updateProperty(propIndex, "value", uuidv4());
+                              // If randomize values was checked, uncheck it
+                              if (prop.isLookalike) {
+                                updateProperty(propIndex, "isLookalike", false);
+                                updateProperty(propIndex, "lookalikeType", undefined);
+                                updateProperty(propIndex, "lookalikeValues", undefined);
+                                updateProperty(propIndex, "lookalikeRange", undefined);
+                              }
+                            } else {
+                              // When unchecking, clear the UUID-related field
+                              updateProperty(propIndex, "useUUID", false);
+                              updateProperty(propIndex, "value", "");
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <Label className={!prop.key ? 'text-muted-foreground/50' : ''}>
+                          Generate UUID
                         </Label>
                       </div>
                     </TableCell>
@@ -162,9 +204,23 @@ export function BackfillEventForm({ backfillCustomerId = '' }: BackfillEventForm
                         <div className="space-y-2">
                           <Select
                             value={prop.lookalikeType || "set"}
-                            onValueChange={(value) => 
-                              updateProperty(propIndex, "lookalikeType", value as "set" | "range")
-                            }
+                            onValueChange={(value) => {
+                              const previousType = prop.lookalikeType;
+                              updateProperty(propIndex, "lookalikeType", value as "set" | "range");
+                              
+                              // Clear values when switching between types
+                              if (value === "set" && previousType === "range") {
+                                // Clear range values when switching to set
+                                updateProperty(propIndex, "lookalikeRange", undefined);
+                                updateProperty(propIndex, "lookalikeValues", []);
+                                updateProperty(propIndex, "value", ""); // Clear the visible value
+                              } else if (value === "range" && previousType === "set") {
+                                // Clear set values when switching to range
+                                updateProperty(propIndex, "lookalikeValues", undefined);
+                                updateProperty(propIndex, "lookalikeRange", { min: 0, max: 10 });
+                                updateProperty(propIndex, "value", ""); // Clear the visible value
+                              }
+                            }}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select randomization type" />

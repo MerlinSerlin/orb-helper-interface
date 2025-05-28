@@ -19,6 +19,8 @@ export type BackfillPropertyValue = string | {
   type: 'range';
   min: number;
   max: number;
+} | {
+  useUUID: true;
 };
 
 // Lines below would be for backfill updates feature in webapp. Currently we don't have this feature, logging in terminal is fine for now.

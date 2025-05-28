@@ -7,6 +7,7 @@ export type LookalikeRange = {
     key: string;
     value: string;
     isLookalike: boolean;
+    useUUID?: boolean;
     lookalikeType?: "set" | "range";
     lookalikeValues?: string[];
     lookalikeRange?: LookalikeRange;

@@ -184,7 +184,12 @@ export function BackfillAdapter() {
       event.properties.forEach(prop => {
         if (!prop.key) return; // Skip properties without keys
         
-        if (prop.isLookalike) {
+        if (prop.useUUID) {
+          // For UUID generation, we pass the useUUID flag to the Python script
+          eventProperties[prop.key] = {
+            useUUID: true
+          };
+        } else if (prop.isLookalike) {
           if (prop.lookalikeType === 'set' && prop.lookalikeValues && prop.lookalikeValues.length > 0) {
             // For set type, we pass the array of values for random.choice()
             eventProperties[prop.key] = {
