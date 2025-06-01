@@ -14,6 +14,10 @@ interface BackfillEventState {
 interface BackfillEventActions {
   // Event actions
   updateEvent: (field: keyof Omit<Event, "properties">, value: string) => void
+  updateEventField: <K extends 'event_name' | 'timestamp' | 'external_customer_id' | 'animatingSubmission'>(
+    fieldName: K, 
+    value: K extends 'animatingSubmission' ? boolean : string
+  ) => void;
   
   // Property actions
   addProperty: () => void
@@ -28,6 +32,10 @@ interface BackfillEventActions {
   setIsSubmitting: (isSubmitting: boolean) => void
   setError: (error: string | null) => void
   reset: () => void
+  
+  // Form preservation actions (similar to events store)
+  markEventAsSubmitted: () => void
+  regenerateIdempotencyKey: () => void
 }
 
 type BackfillEventStore = BackfillEventState & BackfillEventActions
@@ -38,6 +46,7 @@ const createInitialEvent = (): Event => ({
   properties: [],
   idempotency_key: uuidv4(),
   external_customer_id: "",
+  submitted: false,
 })
 
 export const useBackfillEventStore = create<BackfillEventStore>((set) => ({
@@ -50,6 +59,14 @@ export const useBackfillEventStore = create<BackfillEventStore>((set) => ({
   updateEvent: (field, value) => set((state) => ({
     event: { ...state.event, [field]: value }
   })),
+
+  updateEventField: <K extends "event_name" | "timestamp" | "external_customer_id" | "animatingSubmission">(
+    fieldName: K, 
+    value: K extends "animatingSubmission" ? boolean : string
+  ) => 
+    set((state) => ({
+      event: { ...state.event, [fieldName]: value }
+    })),
 
   // Property actions
   addProperty: () => set((state) => ({
@@ -121,5 +138,23 @@ export const useBackfillEventStore = create<BackfillEventStore>((set) => ({
     event: createInitialEvent(),
     isSubmitting: false,
     error: null
-  })
+  }),
+
+  // Form preservation actions (similar to events store)
+  markEventAsSubmitted: () => 
+    set(state => ({
+      event: { 
+        ...state.event, 
+        submitted: true,
+        animatingSubmission: true,
+        lastSubmittedAt: new Date().toISOString()
+      }
+    })),
+
+  regenerateIdempotencyKey: () => set((state) => ({
+    event: {
+      ...state.event,
+      idempotency_key: uuidv4(), // Generate a new UUID
+    }
+  })),
 }))

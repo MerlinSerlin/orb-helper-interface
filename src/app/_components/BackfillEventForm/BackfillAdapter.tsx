@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useBackfillEventStore } from './store'
+import { useBackfillSubmission } from './useBackfillSubmission'
 import { AlertCircle } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
-import { BackfillConfig, BackfillPropertyValue  } from '@/types/backfill'
+import { BackfillConfig } from '@/types/backfill'
 
 import {
   getMinimumBackfillDate,
@@ -34,11 +35,15 @@ export function BackfillAdapter() {
       message?: string;
     };
 
-  const { event, updateEvent, reset } = useBackfillEventStore()
+  // Form preservation state
+  const [preserveFormData, setPreserveFormData] = useState(false);
+
+  const { event, updateEvent } = useBackfillEventStore()
+  const { mutate: submitBackfill, isPending, error: submissionError, data } = useBackfillSubmission(preserveFormData)
+  
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [eventsPerDayRange, setEventsPerDayRange] = useState<{ min: number; max: number }>({ min: 1, max: 10 })
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldError, setFieldError] = useState<{
     startDate?: string;
@@ -136,11 +141,39 @@ export function BackfillAdapter() {
     }
   }, [testMode]);
 
-  const handleSubmitBackfill = async () => {
+  // Handle successful submission from the hook
+  useEffect(() => {
+    if (data?.success) {
+      if (testMode) {
+        // In test mode, show the validated config
+        setTestResponse(data);
+        setSuccess('Validation successful. See the validated configuration below.');
+      } else {
+        // In normal mode, show success message and conditionally reset form based on preserveFormData
+        setSuccess(`Backfill job submitted successfully with ID: ${data.jobId}`);
+        if (!preserveFormData) {
+          // Reset local state only if not preserving form data (event data is handled by the hook)
+          setExternalCustomerId('');
+          setStartDate('');
+          setEndDate('');
+        }
+      }
+    }
+  }, [data, testMode, preserveFormData]);
+
+  // Handle submission errors from the hook
+  useEffect(() => {
+    if (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : 'An error occurred while submitting the backfill job');
+    }
+  }, [submissionError]);
+
+  const handleSubmitBackfill = () => {
     // Clear any previous errors and test response
     setError(null);
     setFieldError({});
     setTestResponse(null);
+    setSuccess(null);
     
     // Validate all required fields
     if (!startDate || !endDate) {
@@ -173,89 +206,15 @@ export function BackfillAdapter() {
       return;
     }
 
-    setIsSubmitting(true);
-    setSuccess(null);
-
-    try {
-      // Format the event properties for the Python script
-      const eventProperties: Record<string, BackfillPropertyValue> = {};
-      
-      // Process each property to properly format for the Python script
-      event.properties.forEach(prop => {
-        if (!prop.key) return; // Skip properties without keys
-        
-        if (prop.useUUID) {
-          // For UUID generation, we pass the useUUID flag to the Python script
-          eventProperties[prop.key] = {
-            useUUID: true
-          };
-        } else if (prop.isLookalike) {
-          if (prop.lookalikeType === 'set' && prop.lookalikeValues && prop.lookalikeValues.length > 0) {
-            // For set type, we pass the array of values for random.choice()
-            eventProperties[prop.key] = {
-              type: 'set',
-              values: prop.lookalikeValues
-            };
-          } else if (prop.lookalikeType === 'range' && prop.lookalikeRange) {
-            // For range type, we pass min and max for random.randint()
-            eventProperties[prop.key] = {
-              type: 'range',
-              min: prop.lookalikeRange.min,
-              max: prop.lookalikeRange.max
-            };
-          }
-        } else {
-          // For fixed values, we just pass the string value
-          eventProperties[prop.key] = prop.value;
-        }
-      });
-
-      // Create the configuration for the Python script
-      const backfillConfig = {
-        event_name: event.event_name,
-        external_customer_id: event.external_customer_id,
-        start_date: startDate, // Just use the date string directly
-        end_date: endDate, // Just use the date string directly
-        events_per_day: { type: 'range', min: eventsPerDayRange.min, max: eventsPerDayRange.max },
-        properties: eventProperties,
-        backfill_customer_id: externalCustomerId || null,
-        test_mode: testMode, // Add test mode flag
-        replace_existing_events: replaceExistingEvents // Add the replace existing events flag
-      };
-
-      // Send to API route
-      const response = await fetch('/api/backfill', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(backfillConfig),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to start backfill');
-      }
-
-      const result = await response.json();
-      
-      if (testMode) {
-        // In test mode, show the validated config
-        setTestResponse(result);
-        setSuccess('Validation successful. See the validated configuration below.');
-      } else {
-        // In normal mode, show success message and reset form
-        setSuccess(`Backfill job submitted successfully with ID: ${result.jobId}`);
-        reset(); // Reset the form after successful submission
-        setExternalCustomerId(''); // Reset the backfill external customer ID
-        setStartDate('');
-        setEndDate('');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while submitting the backfill job');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Submit using the hook
+    submitBackfill({
+      startDate,
+      endDate,
+      eventsPerDayRange,
+      externalCustomerId,
+      testMode,
+      replaceExistingEvents
+    });
   };
 
   return (
@@ -478,6 +437,18 @@ export function BackfillAdapter() {
               (Validate without executing the backfill)
             </span>
           </div>
+
+          {/* Preserve Form Data Checkbox */}
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="preserve-form-data" 
+              checked={preserveFormData} 
+              onCheckedChange={(checked) => setPreserveFormData(checked === true)}
+            />
+            <Label htmlFor="preserve-form-data" className="text-sm font-medium">
+              Preserve form data after submission
+            </Label>
+          </div>
         </CardContent>
       </Card>
       
@@ -489,10 +460,10 @@ export function BackfillAdapter() {
           <div className="flex justify-end">
             <Button 
               onClick={handleSubmitBackfill} 
-              disabled={isSubmitting || !!fieldError.startDate || !!fieldError.endDate}
+              disabled={isPending || !!fieldError.startDate || !!fieldError.endDate}
               className="w-full md:w-auto"
             >
-              {isSubmitting 
+              {isPending 
                 ? 'Submitting...' 
                 : testMode 
                   ? 'Validate Configuration' 
